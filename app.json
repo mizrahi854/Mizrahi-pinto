@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "MIZRAHI PINTO",
+    "slug": "mizrahi-pinto",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mizrahipinto.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "המצלמה משמשת לסריקת ברקוד של מוצרי מזון ולצילום ארוחות.",
+        "NSPhotoLibraryUsageDescription": "גישה לגלריה משמשת להעלאת תמונת ארוחה."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0705",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.mizrahipinto.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      "expo-video",
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "המצלמה משמשת לסריקת ברקוד של מוצרי מזון."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E8782A"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0705",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
+      ]
+    ],
+    "scheme": "mizrahipinto",
+    "backgroundColor": "#0B0705",
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
