@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const DIST = 'dist';
-const BASE = '/Mizrahi-pinto';
+const BASE = process.env.EXPO_BASE_URL ?? '/Mizrahi-pinto';
 const icon = 'assets/icon.png';
 
 const resize = (size, out) => {
