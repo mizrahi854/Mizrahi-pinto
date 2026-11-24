@@ -27,7 +27,12 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "name": "MIZRAHI PINTO",
+      "shortName": "MIZRAHI",
+      "themeColor": "#0B0705",
+      "backgroundColor": "#0B0705",
+      "lang": "he"
     },
     "plugins": [
       "expo-router",
@@ -65,7 +70,8 @@
     "scheme": "mizrahipinto",
     "backgroundColor": "#0B0705",
     "experiments": {
-      "typedRoutes": false
+      "typedRoutes": false,
+      "baseUrl": "/Mizrahi-pinto"
     }
   }
 }
