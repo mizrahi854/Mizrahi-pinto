@@ -24,7 +24,9 @@ const CATS: Cat[] = [
   { key: 'carbs', label: 'פחמימות', icon: 'wheat', cats: ['carbs', 'bread'], section: 'פחמימות' },
   { key: 'fats', label: 'שומנים', icon: 'drop', cats: ['fats'], section: 'שומנים ותוספות' },
   { key: 'produce', label: 'פירות', icon: 'sparkle', cats: ['produce'], section: 'פירות וירקות' },
-  { key: 'meals', label: 'ארוחות', icon: 'bowl', cats: ['meals'], section: 'ארוחות ומשקאות' },
+  { key: 'snacks', label: 'חטיפים', icon: 'star', cats: ['snacks'], section: 'חטיפים' },
+  { key: 'drinks', label: 'משקאות', icon: 'drop', cats: ['drinks'], section: 'משקאות' },
+  { key: 'meals', label: 'מנות', icon: 'bowl', cats: ['meals'], section: 'מנות ואוכל מוכן' },
   { key: 'fav', label: 'מועדפים', icon: 'star', section: 'המועדפים שלי' },
   { key: 'frequent', label: 'תכופים', icon: 'repeat', section: 'נצרכים בתדירות גבוהה' },
   { key: 'recent', label: 'אחרונים', icon: 'clock', section: 'אחרונים' },
@@ -266,8 +268,8 @@ function FoodCard({ f, onOpen, onAdd }: { f: Food; onOpen: () => void; onAdd: ()
 
 const styles = StyleSheet.create({
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, height: 56, borderRadius: radius.pill, backgroundColor: light.cardSoft },
-  searchInput: { flex: 1, color: light.text, fontFamily: fonts.regular, fontSize: 16, height: 52 },
+  search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, height: 56, borderRadius: radius.pill, backgroundColor: light.cardSoft, borderWidth: 1.5, borderColor: 'transparent' },
+  searchInput: { flex: 1, color: light.text, fontFamily: fonts.regular, fontSize: 16, height: 52, outlineStyle: 'none' } as any,
   scan: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: light.cardSoft },
   cat: { width: 84, height: 88, borderRadius: 20, alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: light.card, borderWidth: 1, borderColor: light.border },
   catOn: { backgroundColor: light.accent, borderColor: light.accent },

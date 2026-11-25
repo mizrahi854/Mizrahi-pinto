@@ -43,7 +43,7 @@ export function mapOFF(p: OFFProduct): Food | null {
     category: 'custom',
     basis: liquid ? 'ml' : 'g',
     per100: hasAny ? per100 : null,
-    portions: num(p.serving_quantity) && num(p.serving_quantity)! < 2000 ? [{ label: 'מנה לפי היצרן', grams: num(p.serving_quantity)! }] : [],
+    portions: num(p.serving_quantity) && num(p.serving_quantity)! < 2000 ? [{ label: 'מנה', grams: num(p.serving_quantity)! }] : [],
     packageSize: num(p.product_quantity) && num(p.product_quantity)! < 10000 ? num(p.product_quantity)! : undefined,
     barcode: p.code,
     imageUrl: p.image_front_url,
