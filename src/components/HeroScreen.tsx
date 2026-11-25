@@ -14,9 +14,9 @@ import { colors, fonts, radius, space, type } from '@/theme/tokens';
  * side rulers, dot-matrix headline, glass pill, sunken U-wave and a panel below.
  */
 export function HeroScreen({
-  title, dotValue, dotText, dotSuffix, label, pill, pillIcon = 'flame', onPill, progress = 0.5, children, heroHeight = 300, back = false, menu, tabBar = true, above,
+  title, dotValue, dotText, dotSize = 7.6, dotSuffix, label, pill, pillIcon = 'flame', onPill, progress = 0.5, children, heroHeight = 300, back = false, menu, tabBar = true, above,
 }: {
-  title?: string; dotValue?: number; dotText?: string; dotSuffix?: string; label?: string; pill?: string; pillIcon?: IconName; onPill?: () => void; progress?: number;
+  title?: string; dotValue?: number; dotText?: string; dotSize?: number; dotSuffix?: string; label?: string; pill?: string; pillIcon?: IconName; onPill?: () => void; progress?: number;
   children: ReactNode; heroHeight?: number; back?: boolean; menu?: () => void; tabBar?: boolean; above?: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
@@ -35,7 +35,7 @@ export function HeroScreen({
             </View>
             <Animated.View entering={reduce ? undefined : FadeInDown.duration(450)} style={styles.center}>
               {dotValue != null && <DotNumber value={dotValue} suffix={dotSuffix} dot={7.6} gap={3.2} />}
-              {dotText != null && <DotMatrix text={dotText} dot={7.6} gap={3.2} />}
+              {dotText != null && <DotMatrix text={dotText} dot={dotSize} gap={dotSize * 0.42} />}
               {title && <Text accessibilityRole="header" style={styles.title}>{title}</Text>}
               {label && <Text style={styles.label}>{label}</Text>}
               {pill && (

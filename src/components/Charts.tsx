@@ -35,6 +35,7 @@ type Datum = { label: string; value: number | null };
 
 /** Glowing orange bars. `null` = day not logged → dashed placeholder, never zero. */
 export function BarChart({ data, height = 190, unit = '', target }: { data: Datum[]; height?: number; unit?: string; target?: number }) {
+  const u = React.useId().replace(/[^a-zA-Z0-9]/g, '');
   const [w, setW] = useState(300);
   const p = useGrow(data);
   const max = niceMax(Math.max(target ?? 0, ...data.map((d) => d.value ?? 0)) * 1.05);
@@ -48,7 +49,7 @@ export function BarChart({ data, height = 190, unit = '', target }: { data: Datu
     <View onLayout={(e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width)} accessible accessibilityRole="image" accessibilityLabel={`גרף עמודות. ${label}`}>
       <Svg width={w} height={height}>
         <Defs>
-          <LinearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={`bar${u}`} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={colors.accentLight} />
             <Stop offset="0.5" stopColor={colors.accent} />
             <Stop offset="1" stopColor={colors.emberDeep} stopOpacity="0.85" />
@@ -74,7 +75,7 @@ export function BarChart({ data, height = 190, unit = '', target }: { data: Datu
               ) : (
                 <>
                   <Rect x={x - 3} y={top + ch - hgt - 3} width={bw + 6} height={hgt + 3} rx={9} fill={colors.accent} opacity={0.18} />
-                  <Rect x={x} y={top + ch - hgt} width={bw} height={Math.max(hgt, 1)} rx={7} fill="url(#bar)" />
+                  <Rect x={x} y={top + ch - hgt} width={bw} height={Math.max(hgt, 1)} rx={7} fill={`url(#bar${u})`} />
                   <Rect x={x + 3} y={top + ch - hgt + 2} width={bw - 6} height={Math.min(6, hgt)} rx={3} fill="#fff" opacity={0.25} />
                 </>
               )}
@@ -90,6 +91,7 @@ export function BarChart({ data, height = 190, unit = '', target }: { data: Datu
 
 /** Smooth trend line with glow and highlighted last point. */
 export function LineChart({ data, height = 170, unit = '', decimals = 1 }: { data: Datum[]; height?: number; unit?: string; decimals?: number }) {
+  const u = React.useId().replace(/[^a-zA-Z0-9]/g, '');
   const [w, setW] = useState(300);
   const p = useGrow(data);
   const vals = data.map((d) => d.value).filter((v): v is number => v != null);
@@ -117,7 +119,7 @@ export function LineChart({ data, height = 170, unit = '', decimals = 1 }: { dat
     <View onLayout={(e) => setW(e.nativeEvent.layout.width)} accessible accessibilityRole="image" accessibilityLabel={`גרף מגמה. ${data.map((d) => `${d.label}: ${d.value ?? 'אין'} ${unit}`).join(', ')}`}>
       <Svg width={w} height={height}>
         <Defs>
-          <LinearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={`area${u}`} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={colors.accent} stopOpacity="0.35" />
             <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
           </LinearGradient>
@@ -131,7 +133,7 @@ export function LineChart({ data, height = 170, unit = '', decimals = 1 }: { dat
             </React.Fragment>
           );
         })}
-        <Path d={area} fill="url(#area)" />
+        <Path d={area} fill={`url(#area${u})`} />
         <Path d={path} stroke={colors.accent} strokeWidth={7} strokeOpacity={0.2} fill="none" />
         <Path d={path} stroke={colors.accentLight} strokeWidth={2.2} fill="none" />
         {pts.map((pt, i) => pt && (

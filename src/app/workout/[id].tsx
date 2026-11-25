@@ -1,31 +1,53 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { HeroScreen } from '@/components/HeroScreen';
-import { Card, Row, T, Tap, Button, Empty, Screen, toast } from '@/components/ui';
+import { Image } from 'expo-image';
+import Svg, { Circle } from 'react-native-svg';
+import { LightScreen, LCard, Segmented, LPrimary, LIconButton, ls } from '@/components/light';
+import { Tap, Row, Sheet, ListItem, toast } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
-import { DottedProgress } from '@/components/DottedProgress';
+import { BodyMap } from '@/components/BodyMap';
 import { useApp } from '@/store/useApp';
 import { planById, exerciseById, estimateMinutes, MUSCLE_LABELS, EQUIPMENT_LABELS } from '@/data/exercises';
+import { EXERCISE_ART } from '@/data/media';
 import { sessionVolume } from '@/lib/stats';
-import { colors, fonts, radius, space, type } from '@/theme/tokens';
+import { prettyDate, diffDays, dateKey } from '@/lib/dates';
+import { light, fonts, radius, space } from '@/theme/tokens';
 
-const EQ_ICON: Record<string, IconName> = { barbell: 'dumbbell', dumbbell: 'dumbbell', machine: 'layers', cable: 'repeat', bodyweight: 'body', band: 'repeat', kettlebell: 'weight', none: 'bolt' };
-
-/** Workout details (approved "Push Day" screen) */
+/** Workout details – approved light "Push Day" screen */
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const custom = useApp((s) => s.customPlans);
   const sessions = useApp((s) => s.sessions);
   const activeId = useApp((s) => s.activeSessionId);
+  const schedule = useApp((s) => s.schedule);
+  const profile = useApp((s) => s.profile);
   const start = useApp((s) => s.startWorkout);
   const deleteCustom = useApp((s) => s.deleteCustomPlan);
+  const [tab, setTab] = useState<'ex' | 'sum' | 'hist'>('ex');
+  const [menu, setMenu] = useState(false);
   const plan = planById(id ?? '', custom);
-  if (!plan) return <Screen title="אימון"><Empty title="האימון לא נמצא" /></Screen>;
+  if (!plan) {
+    return <LightScreen title="אימון"><Text style={[ls.body, { textAlign: 'center', marginTop: 40 }]}>האימון לא נמצא</Text></LightScreen>;
+  }
   const active = sessions.find((s) => s.id === activeId && s.planId === plan.id && s.status !== 'done');
-  const last = [...sessions].reverse().find((s) => s.planId === plan.id && s.status === 'done');
-  const lastVol = last ? sessionVolume(last).volume : null;
-  const doneEx = active ? active.exercises.filter((e) => e.sets.every((s) => s.done)).length : 0;
+  const history = sessions.filter((s) => s.planId === plan.id && s.status === 'done').sort((a, b) => b.startedAt - a.startedAt);
+  const last = history[0];
+  const doneToday = last && last.date === dateKey() ? last : undefined;
+  const isDone = (exId: string) => {
+    const src = active ?? doneToday;
+    const e = src?.exercises.find((x) => x.exerciseId === exId);
+    return !!e && e.sets.length > 0 && e.sets.every((s) => s.done);
+  };
+  const weekPlanned = Object.values(schedule).filter((x) => x !== 'rest').length;
+  const weekDone = sessions.filter((s) => s.status === 'done' && Date.now() - s.startedAt < 7 * 86400000).length;
+  const totalWeeks = Math.round(profile.planDays / 7);
+  const weekNo = Math.min(totalWeeks, Math.max(1, Math.floor(diffDays(profile.targetsSince ?? dateKey(), dateKey()) / 7) + 1));
+  const totalSets = plan.exercises.reduce((m, e) => m + e.sets, 0);
+  const muscles = [...new Set(plan.exercises.flatMap((e) => exerciseById(e.exerciseId)?.primary ?? []))];
+  const secondary = [...new Set(plan.exercises.flatMap((e) => exerciseById(e.exerciseId)?.secondary ?? []))].filter((m) => !muscles.includes(m));
+  const heading = plan.id === 'cardio' ? 'אימון אירובי' : plan.id === 'mobility' ? 'גמישות' : plan.location === 'home' ? 'אימון בית' : 'אימון כוח';
+
   const go = () => {
     if (plan.premium) return router.push('/premium');
     start(plan.id);
@@ -33,81 +55,154 @@ export default function WorkoutDetail() {
   };
 
   return (
-    <HeroScreen back title={plan.name} label={plan.focus} heroHeight={300} progress={plan.exercises.length ? doneEx / plan.exercises.length : 0} tabBar={false}
-      above={
-        <Row style={{ marginTop: 10 }} gap={8}>
-          <Pill icon="dumbbell" v={lastVol != null ? (lastVol >= 1000 ? `${(lastVol / 1000).toFixed(1)}K` : String(lastVol)) : '—'} l="נפח אחרון" />
-          <Pill icon="layers" v={String(plan.exercises.length)} l="תרגילים" />
-          <Pill icon="timer" v={String(estimateMinutes(plan))} l="דקות" />
-        </Row>
-      }
-      menu={plan.custom ? () => { deleteCustom(plan.id); toast('האימון נמחק'); router.back(); } : undefined}
+    <LightScreen
+      title={heading}
+      right={<LIconButton icon="dots" label="אפשרויות" onPress={() => setMenu(true)} />}
+      footer={<LPrimary title={plan.premium ? 'זמין ב-Premium' : active ? 'המשך אימון' : 'התחל אימון'} icon={plan.premium ? 'lock' : 'play'} onPress={go} />}
     >
-      <Card style={{ padding: 18 }}>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <T.Muted>התקדמות אימון</T.Muted>
-          <Tap onPress={go} label={active ? 'המשך אימון' : 'התחלת אימון'}>
-            <View style={styles.play}><Icon name={plan.premium ? 'lock' : 'play'} size={22} color="#fff" /></View>
-          </Tap>
+      {/* progress strip */}
+      <LCard style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
+        <Row style={{ flex: 1 }} gap={12}>
+          <MiniRing value={weekDone / Math.max(1, weekPlanned)} />
+          <View>
+            <Text style={styles.big}>{`⁦${weekDone}/${weekPlanned}⁩`}</Text>
+            <Text style={ls.muted}>אימונים הושלמו</Text>
+          </View>
         </Row>
-        <View style={{ marginTop: 8 }}><DottedProgress value={plan.exercises.length ? doneEx / plan.exercises.length : 0} /></View>
-        <Text style={[type.label, { color: colors.text2, textAlign: 'center', marginTop: 6 }]}>{String(doneEx).padStart(2, '0')} / {String(plan.exercises.length).padStart(2, '0')} הושלמו</Text>
-      </Card>
+        <View style={styles.vDivider} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={styles.big}>שבוע {weekNo}</Text>
+          <Text style={ls.muted}>מתוך {totalWeeks}</Text>
+        </View>
+      </LCard>
 
-      {plan.exercises.map((pe, i) => {
-        const ex = exerciseById(pe.exerciseId);
-        if (!ex) return null;
-        const first = i === 0;
-        return (
-          <Tap key={pe.exerciseId + i} onPress={() => router.push(`/exercise/${ex.id}`)} label={`${ex.name}, ${pe.sets} סטים`}>
-            <View style={[styles.ex, first && styles.exFirst]}>
-              <Row>
-                <View style={[styles.exIcon, first && { width: 64, height: 64 }]}><Icon name={EQ_ICON[ex.equipment] ?? 'dumbbell'} size={first ? 30 : 24} /></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[type.bodyMedium, { color: colors.text, fontFamily: fonts.semibold, fontSize: first ? 18 : 15.5 }]}>{ex.name}</Text>
-                  <Text style={[type.label, { color: colors.text2 }]}>{ex.nameEn}</Text>
+      {/* hero */}
+      <View style={styles.hero}>
+        <View style={{ flex: 1, gap: 6 }}>
+          <View style={styles.badge}><Icon name="dumbbell" size={14} color={light.accent} /><Text style={styles.badgeText}>תוכנית אימון</Text></View>
+          <Text style={styles.planName}>{plan.name}</Text>
+          <Text style={ls.muted}>{plan.focus}</Text>
+          <Row gap={8} style={{ marginTop: 8 }}>
+            <Stat icon="layers" value={String(totalSets)} label="סטים" />
+            <Stat icon="clock" value={`≈ ${estimateMinutes(plan)}`} label="דקות" />
+            <Stat icon="dumbbell" value={String(plan.exercises.length)} label="תרגילים" />
+          </Row>
+        </View>
+        <View style={styles.figure}>
+          <BodyMap single tone="light" primary={muscles} secondary={secondary} size={118} />
+        </View>
+      </View>
+
+      <Segmented value={tab} onChange={setTab} options={[{ key: 'ex', label: 'תרגילים' }, { key: 'sum', label: 'סיכום' }, { key: 'hist', label: 'היסטוריה' }]} />
+
+      {tab === 'ex' && (
+        <View style={{ marginTop: space.md, gap: 10 }}>
+          {plan.exercises.map((pe, i) => {
+            const ex = exerciseById(pe.exerciseId);
+            if (!ex) return null;
+            const done = isDone(ex.id);
+            const art = EXERCISE_ART[ex.id];
+            return (
+              <Tap key={pe.exerciseId + i} onPress={() => router.push(`/exercise/${ex.id}`)} label={`${ex.name}, ${pe.sets} סטים${done ? ', הושלם' : ''}`}>
+                <View style={styles.exRow}>
+                  <View style={[styles.check, done && styles.checkOn]}>{done && <Icon name="check" size={18} color="#fff" strokeWidth={2.6} />}</View>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={styles.exName} numberOfLines={1}>{ex.name}</Text>
+                    <Text style={ls.muted}>{ex.primary.map((m) => MUSCLE_LABELS[m]).join(' · ')}</Text>
+                    <Row gap={6} style={{ marginTop: 4 }}>
+                      <View style={ls.chip}><Text style={ls.chipText}>{pe.sets} סטים</Text></View>
+                      <View style={ls.chip}><Text style={ls.chipText}>{pe.seconds ? `${pe.seconds} שנ׳` : `⁦${pe.repsMin} – ${pe.repsMax}⁩ חזרות`}</Text></View>
+                    </Row>
+                  </View>
+                  <View style={styles.exArt}>
+                    {art ? <Image source={art} style={{ width: 92, height: 92 }} contentFit="contain" accessibilityLabel={`איור: ${ex.name}`} /> : <Icon name={ex.kind === 'cardio' ? 'bolt' : ex.kind === 'mobility' ? 'body' : 'dumbbell'} size={34} color={light.accent} />}
+                  </View>
+                  <Icon name="chevron" size={20} color={light.text} />
                 </View>
-                {!first && (
-                  <Row gap={10}>
-                    <View style={{ alignItems: 'center' }}><Icon name="layers" size={16} /><T.Caption>{pe.sets} סטים</T.Caption></View>
-                    <View style={{ alignItems: 'center' }}><T.Body style={{ fontFamily: fonts.medium }}>{pe.seconds ? `${pe.seconds}″` : `${pe.repsMin}-${pe.repsMax}`}</T.Body><T.Caption>{pe.seconds ? 'שניות' : 'חזרות'}</T.Caption></View>
-                  </Row>
-                )}
-                <Icon name="chevron" size={18} color={colors.text2} />
-              </Row>
-              {first && (
-                <Row style={{ justifyContent: 'space-around', marginTop: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }}>
-                  <Mini icon="layers" t={`${pe.sets} סטים`} />
-                  <Mini icon="repeat" t={pe.seconds ? `${pe.seconds} שניות` : `${pe.repsMin}-${pe.repsMax} חזרות`} />
-                  <Mini icon="weight" t={last?.exercises.find((e) => e.exerciseId === ex.id)?.sets[0]?.weight != null ? `${last!.exercises.find((e) => e.exerciseId === ex.id)!.sets[0]!.weight} ק״ג (קודם)` : EQUIPMENT_LABELS[ex.equipment]} />
-                </Row>
-              )}
-            </View>
-          </Tap>
-        );
-      })}
-      <Button title={plan.premium ? 'זמין ב-Premium' : active ? 'המשך אימון' : 'התחלת אימון'} icon={plan.premium ? 'lock' : 'play'} onPress={go} style={{ marginTop: space.md }} />
-      <T.Caption style={{ textAlign: 'center', marginTop: 8 }}>שרירים: {[...new Set(plan.exercises.flatMap((e) => exerciseById(e.exerciseId)?.primary ?? []))].map((m) => MUSCLE_LABELS[m]).join(' · ')}</T.Caption>
-    </HeroScreen>
+              </Tap>
+            );
+          })}
+          <Text style={[ls.caption, { textAlign: 'center' }]}>איורים: Everkinetic (CC BY-SA 3.0) · כאב חד? עצור והתייעץ עם איש מקצוע.</Text>
+        </View>
+      )}
+
+      {tab === 'sum' && (
+        <View style={{ marginTop: space.md, gap: 10 }}>
+          <LCard style={{ gap: 8 }}>
+            <Text style={ls.bodyStrong}>שרירים עיקריים</Text>
+            <Text style={ls.body}>{muscles.map((m) => MUSCLE_LABELS[m]).join(' · ')}</Text>
+            {secondary.length > 0 && <Text style={ls.muted}>משניים: {secondary.map((m) => MUSCLE_LABELS[m]).join(' · ')}</Text>}
+          </LCard>
+          <LCard style={{ gap: 8 }}>
+            <Text style={ls.bodyStrong}>ציוד</Text>
+            <Text style={ls.body}>{[...new Set(plan.exercises.map((e) => exerciseById(e.exerciseId)?.equipment).filter(Boolean))].map((e) => EQUIPMENT_LABELS[e!]).join(' · ')}</Text>
+          </LCard>
+          <LCard style={{ gap: 8 }}>
+            <Text style={ls.bodyStrong}>פעם קודמת</Text>
+            <Text style={ls.body}>{last ? `${prettyDate(last.date)} · ${sessionVolume(last).minutes} דק׳ · ${sessionVolume(last).sets} סטים · ${sessionVolume(last).volume.toLocaleString()} ק״ג נפח` : 'עוד לא בוצע'}</Text>
+          </LCard>
+        </View>
+      )}
+
+      {tab === 'hist' && (
+        <View style={{ marginTop: space.md, gap: 10 }}>
+          {history.length === 0 ? <Text style={[ls.muted, { textAlign: 'center', marginTop: 20 }]}>עוד אין אימונים קודמים בתוכנית זו.</Text> : history.map((h) => {
+            const v = sessionVolume(h);
+            return (
+              <LCard key={h.id} onPress={() => router.push({ pathname: '/workout/summary', params: { id: h.id } })} label={prettyDate(h.date)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Icon name="calendar" size={22} color={light.accent} />
+                <View style={{ flex: 1 }}><Text style={ls.bodyStrong}>{prettyDate(h.date)}</Text><Text style={ls.muted}>{v.minutes} דק׳ · {v.sets} סטים · {v.volume.toLocaleString()} ק״ג</Text></View>
+                <Icon name="chevron" size={18} color={light.text2} />
+              </LCard>
+            );
+          })}
+        </View>
+      )}
+
+      <Sheet visible={menu} onClose={() => setMenu(false)} title={plan.name}>
+        <ListItem icon="body" title="מאגר תרגילים" onPress={() => { setMenu(false); router.push('/exercises'); }} />
+        <ListItem icon="calendar" title="לוח אימונים שבועי" onPress={() => { setMenu(false); router.push('/workouts'); }} />
+        <ListItem icon="edit" title="יצירת אימון מותאם" onPress={() => { setMenu(false); router.push('/workout/builder'); }} />
+        {plan.custom && <ListItem icon="trash" danger title="מחיקת האימון" onPress={() => { deleteCustom(plan.id); setMenu(false); toast('האימון נמחק'); router.back(); }} />}
+      </Sheet>
+    </LightScreen>
   );
 }
 
-function Pill({ icon, v, l }: { icon: IconName; v: string; l: string }) {
+function MiniRing({ value }: { value: number }) {
+  const v = Math.max(0, Math.min(1, value));
+  const size = 54, st = 6, r = (size - st) / 2, c = 2 * Math.PI * r;
   return (
-    <View style={styles.pill} accessible accessibilityLabel={`${l}: ${v}`}>
-      <Row gap={6}><Icon name={icon} size={18} /><Text style={{ color: colors.text, fontFamily: fonts.semibold, fontSize: 18 }}>{v}</Text></Row>
-      <Text style={[type.caption, { color: colors.text2 }]}>{l}</Text>
+    <Svg width={size} height={size}>
+      <Circle cx={size / 2} cy={size / 2} r={r} stroke={light.track} strokeWidth={st} fill="none" />
+      <Circle cx={size / 2} cy={size / 2} r={r} stroke={light.accent} strokeWidth={st} fill="none" strokeDasharray={`${c * v} ${c}`} strokeLinecap="round" transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+    </Svg>
+  );
+}
+
+function Stat({ icon, value, label }: { icon: IconName; value: string; label: string }) {
+  return (
+    <View style={styles.stat} accessible accessibilityLabel={`${label}: ${value}`}>
+      <Icon name={icon} size={18} color={light.text} />
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={ls.muted}>{label}</Text>
     </View>
   );
 }
-function Mini({ icon, t }: { icon: IconName; t: string }) {
-  return <View style={{ alignItems: 'center', gap: 4 }}><Icon name={icon} size={18} color={colors.text2} /><Text style={[type.label, { color: colors.text, fontFamily: fonts.medium }]}>{t}</Text></View>;
-}
 
 const styles = StyleSheet.create({
-  play: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.emberMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.accentLight },
-  ex: { marginTop: 10, padding: 14, borderRadius: radius.lg, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border },
-  exFirst: { borderColor: colors.accent, backgroundColor: 'rgba(232,120,42,0.10)', padding: 16 },
-  exIcon: { width: 50, height: 50, borderRadius: 16, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
-  pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: 'rgba(30,18,11,0.7)', borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', minWidth: 92 },
+  big: { fontFamily: fonts.bold, fontSize: 22, color: light.text },
+  vDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: light.border, marginHorizontal: 8 },
+  hero: { flexDirection: 'row', alignItems: 'center', marginVertical: space.lg, gap: 8 },
+  figure: { width: 130, alignItems: 'center' },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, backgroundColor: light.accentSoft },
+  badgeText: { fontFamily: fonts.medium, fontSize: 13, color: light.text },
+  planName: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 42, color: light.text },
+  stat: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 10, borderRadius: 16, backgroundColor: light.cardSoft },
+  statValue: { fontFamily: fonts.bold, fontSize: 18, color: light.text },
+  exRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: radius.lg, backgroundColor: light.card },
+  check: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderColor: '#D9D4D0', alignItems: 'center', justifyContent: 'center' },
+  checkOn: { backgroundColor: light.accent, borderColor: light.accent },
+  exName: { fontFamily: fonts.bold, fontSize: 17, color: light.text },
+  exArt: { width: 100, height: 100, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: light.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });

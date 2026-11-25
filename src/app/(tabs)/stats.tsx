@@ -1,18 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { HeroScreen } from '@/components/HeroScreen';
-import { BentoTile } from '@/components/MacroCard';
 import { BarChart, LineChart } from '@/components/Charts';
-import { Card, Chip, Row, T, Section, Sheet, Stepper, Button, toast, Badge } from '@/components/ui';
-import { Icon } from '@/components/Icon';
+import { DotMatrix } from '@/components/DotMatrix';
+import { Chip, Row, T, Section, Sheet, Stepper, Button, Tap, toast, Badge } from '@/components/ui';
+import { Icon, IconName } from '@/components/Icon';
 import { useApp } from '@/store/useApp';
 import { isAdult } from '@/lib/nutrition';
-import { daysFor, metricSeries, aggregate, bucket, RANGE_DAYS, Range, sessionVolume } from '@/lib/stats';
+import { daysFor, metricSeries, aggregate, bucket, RANGE_DAYS, Range } from '@/lib/stats';
 import { dateKey, addDays } from '@/lib/dates';
-import { colors, fonts, space, type } from '@/theme/tokens';
+import { colors, fonts, radius, space, type } from '@/theme/tokens';
 
-/** 47 Statistics */
+/** 47 Statistics – approved structure: dot headline, glass tiles, weekly calories bars, weight trend */
 export default function Stats() {
   const entries = useApp((s) => s.entries);
   const sessions = useApp((s) => s.sessions);
@@ -20,6 +21,7 @@ export default function Stats() {
   const sleep = useApp((s) => s.sleep);
   const weights = useApp((s) => s.measurements);
   const profile = useApp((s) => s.profile);
+  const schedule = useApp((s) => s.schedule);
   const addMeasurement = useApp((s) => s.addMeasurement);
   const adult = isAdult(profile.age);
   const [range, setRange] = useState<Range>('week');
@@ -35,97 +37,80 @@ export default function Stats() {
   const kcalAgg = aggregate(kcal);
   const prevKcal = aggregate(s('kcal', prevDays));
   const workouts = aggregate(s('workouts'));
-  const prevWorkouts = aggregate(s('workouts', prevDays));
-  const vol = aggregate(s('volume'));
-  const waterAgg = aggregate(s('water'));
-  const weightSeries = metricSeries('weight', daysFor(Math.max(n, 7)), entries, sessions, water, sleep, weights).filter((x) => x.value != null);
+  const waterToday = (water[dateKey()] ?? 0) / 1000;
+  const planned = Object.values(schedule).filter((x) => x !== 'rest').length * Math.max(1, Math.round(n / 7));
+  const weightDays = daysFor(Math.max(n, 7));
+  const weightSeries = metricSeries('weight', weightDays, entries, sessions, water, sleep, weights).filter((x) => x.value != null);
   const lastW = weights[weights.length - 1];
-  const firstW = weights.find((w) => w.date >= daysFor(Math.max(n, 7))[0]!);
-  const doneAll = sessions.filter((x) => x.status === 'done');
-  const streak = useMemo(() => {
-    let c = 0;
-    for (let i = 0; i < 365; i++) {
-      const d = addDays(dateKey(), -i);
-      const any = entries.some((e) => e.date === d) || doneAll.some((x) => x.date === d);
-      if (any) c++; else if (i > 0) break;
-    }
-    return c;
-  }, [entries, doneAll]);
-
-  const delta = (a: number, b: number) => (b === 0 ? null : Math.round(((a - b) / b) * 100));
-  const dk = delta(kcalAgg.avg ?? 0, prevKcal.avg ?? 0);
+  const firstW = weights.find((w) => w.date >= weightDays[0]!);
+  const delta = lastW && firstW && firstW !== lastW ? +(lastW.weightKg - firstW.weightKg).toFixed(1) : null;
+  const dk = prevKcal.avg ? Math.round((((kcalAgg.avg ?? 0) - prevKcal.avg) / prevKcal.avg) * 100) : null;
+  const periodWord = n === 1 ? 'היום' : n === 7 ? 'השבוע' : `${n} ימים`;
 
   return (
-    <HeroScreen title="סטטיסטיקה" label="התקדמות, מגמות והישגים" progress={Math.min(1, workouts.sum / Math.max(1, profile.workoutsPerWeek * (n / 7)))} heroHeight={250}>
-      <Row style={{ marginBottom: space.md, flexWrap: 'wrap' }}>
+    <HeroScreen dotText="סטטיסטיקה" dotSize={4.3} label="התקדמות, מגמות והישגים" progress={Math.min(1, workouts.sum / Math.max(1, planned))} heroHeight={250}>
+      <View style={styles.panelBox}>
+        <Row gap={8}>
+          {adult && <StatTile icon="flame" title={n === 7 ? 'קלוריות שבועיות' : `קלוריות · ${periodWord}`} dot={kcalAgg.sum ? kcalAgg.sum.toLocaleString('en-US') : '0'} onPress={() => router.push('/stats/kcal')} />}
+          <StatTile icon="drop" title="שתיית מים (ליטר)" value={waterToday.toFixed(1)} target={(profile.waterTargetMl / 1000).toFixed(1)} onPress={() => router.push('/stats/water')} />
+        </Row>
+        <Row gap={8}>
+          {adult && <StatTile icon="weight" title="משקל" dot={lastW ? lastW.weightKg.toFixed(1) : '-'} unit="ק״ג" onPress={() => setWeighSheet(true)} />}
+          <StatTile icon="dumbbell" title="אימונים שהושלמו" value={String(workouts.sum)} target={String(planned)} onPress={() => router.push('/workout/history')} />
+        </Row>
+      </View>
+
+      {adult && (
+        <GlowCard onPress={() => router.push('/stats/kcal')} label="גרף קלוריות">
+          <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <Text style={styles.cardTitle}>{n === 7 ? 'קלוריות שבועיות' : `קלוריות · ${periodWord}`}</Text>
+            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+              <DotMatrix text={kcalAgg.sum.toLocaleString('en-US')} dot={3.6} gap={1.6} />
+              <T.Caption style={{ color: colors.text2 }}>סה״כ {periodWord}{kcalAgg.count < n ? ` · ${kcalAgg.count} ימים תועדו` : ''}</T.Caption>
+            </View>
+          </Row>
+          <BarChart data={bucket(kcal, 7)} unit="קק״ל" target={profile.calorieTarget ?? undefined} />
+          {dk != null && <T.Caption style={{ marginTop: 6, color: colors.text2 }}>לעומת התקופה הקודמת: {dk > 0 ? '+' : ''}{dk}% בממוצע יומי · ימים חסרים לא נספרים</T.Caption>}
+        </GlowCard>
+      )}
+
+      {adult && (
+        <GlowCard onPress={() => setWeighSheet(true)} label="מגמת משקל – הוספת מדידה">
+          <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <Text style={styles.cardTitle}>מגמת משקל</Text>
+            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+              <Row gap={6}>
+                <Text style={styles.unit}>ק״ג</Text>
+                <DotMatrix text={lastW ? lastW.weightKg.toFixed(1) : '-'} dot={3.6} gap={1.6} />
+              </Row>
+              {delta != null && <T.Caption style={{ color: colors.text2 }}>{`⁦${delta > 0 ? '+' : ''}${delta}⁩`} ק״ג ({weightDays.length} ימים)</T.Caption>}
+            </View>
+          </Row>
+          <LineChart data={weightSeries} unit="ק״ג" />
+          <T.Caption style={{ marginTop: 6, color: colors.text3 }}>לחיצה להוספת מדידה · מדידות אופציונליות ופרטיות</T.Caption>
+        </GlowCard>
+      )}
+
+      <Row style={{ marginTop: space.lg, flexWrap: 'wrap', justifyContent: 'center' }}>
         <Chip label="יומי" active={range === 'day'} onPress={() => setRange('day')} />
         <Chip label="שבועי" active={range === 'week'} onPress={() => setRange('week')} />
         <Chip label="חודשי" active={range === 'month'} onPress={() => setRange('month')} />
         <Chip label={range === 'custom' ? `${customDays} ימים` : 'טווח מותאם'} active={range === 'custom'} onPress={() => setRange('custom')} />
       </Row>
-      {range === 'custom' && <Card style={{ marginBottom: space.md }}><Row style={{ justifyContent: 'space-between' }}><T.Body>מספר ימים</T.Body><Stepper label="ימים" value={customDays} min={2} max={365} step={7} onChange={(v) => setCustomDays(Math.max(2, v))} /></Row></Card>}
-
-      <View style={{ gap: 10 }}>
-        <Row gap={10}>
-          {adult && <BentoTile icon="flame" title={n === 1 ? 'קלוריות היום' : 'ממוצע יומי'} value={kcalAgg.avg != null ? Math.round(kcalAgg.avg).toLocaleString() : '—'} unit="קק״ל" ring={false} onPress={() => router.push('/stats/kcal')} />}
-          <BentoTile icon="dumbbell" title="אימונים שהושלמו" value={String(workouts.sum)} ring={false} onPress={() => router.push('/stats/workouts')} />
-        </Row>
-        <Row gap={10}>
-          {adult && <BentoTile icon="weight" title="משקל" value={lastW ? lastW.weightKg.toFixed(1) : '—'} unit="ק״ג" ring={false} onPress={() => setWeighSheet(true)} accessibilityHint="הוספת מדידה" />}
-          <BentoTile icon="drop" title="שתייה ממוצעת" value={waterAgg.avg != null ? waterAgg.avg.toFixed(1) : '—'} unit="ליטר" ring={false} onPress={() => router.push('/stats/water')} />
-        </Row>
-        <BentoTile wide icon="bolt" title="רצף ימים פעילים" value={`${streak} ימים`} ring={false} onPress={() => router.push('/stats/sets')} />
-      </View>
-
-      {adult && (
-        <Card style={{ marginTop: space.md }} onPress={() => router.push('/stats/kcal')} label="גרף קלוריות">
-          <Row style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-            <View><T.H>קלוריות</T.H><T.Muted>{kcalAgg.count} ימים תועדו · חסרים לא נספרים</T.Muted></View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[type.title, { color: colors.text, fontVariant: ['tabular-nums'] }]}>{kcalAgg.sum.toLocaleString()}</Text>
-              <T.Caption>סה״כ בתקופה</T.Caption>
-            </View>
-          </Row>
-          <BarChart data={bucket(kcal, 7)} unit="קק״ל" target={profile.calorieTarget ?? undefined} />
-          {dk != null && <T.Caption style={{ marginTop: 6 }}>לעומת התקופה הקודמת: {dk > 0 ? '+' : ''}{dk}% בממוצע יומי</T.Caption>}
-        </Card>
-      )}
-
-      {adult && (
-        <Card style={{ marginTop: space.md }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-            <T.H>מגמת משקל</T.H>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[type.title, { color: colors.text }]}>{lastW ? `${lastW.weightKg.toFixed(1)} ק״ג` : '—'}</Text>
-              {lastW && firstW && firstW !== lastW && <T.Caption>{(lastW.weightKg - firstW.weightKg > 0 ? '+' : '') + (lastW.weightKg - firstW.weightKg).toFixed(1)} ק״ג בתקופה</T.Caption>}
-            </View>
-          </Row>
-          <LineChart data={weightSeries} unit="ק״ג" />
-          <Button title="הוספת מדידה" variant="soft" icon="plus" onPress={() => setWeighSheet(true)} style={{ marginTop: 8 }} />
-          <T.Caption style={{ marginTop: 6 }}>מדידות אופציונליות ופרטיות. ללא ציון גוף או הבטחה לתוצאה.</T.Caption>
-        </Card>
-      )}
-
-      <Card style={{ marginTop: space.md }} onPress={() => router.push('/stats/volume')} label="נפח אימונים">
-        <Row style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-          <T.H>נפח אימונים</T.H>
-          <T.Muted>{Math.round(vol.sum).toLocaleString()} ק״ג · {workouts.sum} אימונים {prevWorkouts.sum ? `(קודם: ${prevWorkouts.sum})` : ''}</T.Muted>
-        </Row>
-        <BarChart data={bucket(s('volume'), 7)} unit="ק״ג" height={150} />
-      </Card>
+      {range === 'custom' && <Row style={{ justifyContent: 'center', marginTop: 10 }}><Stepper label="ימים" value={customDays} min={2} max={365} step={7} onChange={(v) => setCustomDays(Math.max(2, v))} /></Row>}
 
       <Section title="עוד מדדים">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {[['sets', 'סטים'], ['minutes', 'זמן פעילות'], ['protein', 'חלבון'], ['carbs', 'פחמימות'], ['fat', 'שומנים'], ['water', 'שתייה'], ['sleep', 'שינה']].map(([k, l]) => (
+          {[['volume', 'נפח אימונים'], ['sets', 'סטים'], ['minutes', 'זמן פעילות'], ['protein', 'חלבון'], ['carbs', 'פחמימות'], ['fat', 'שומנים'], ['sleep', 'שינה']].map(([k, l]) => (
             <Chip key={k} label={l!} onPress={() => router.push(`/stats/${k}`)} />
           ))}
         </View>
       </Section>
-
-      <Card style={{ marginTop: space.lg }} onPress={() => router.push('/report')} label="דוח שבועי">
-        <Row><Icon name="list" size={24} /><View style={{ flex: 1 }}><T.Body style={{ fontFamily: fonts.medium }}>דוח שבועי</T.Body><T.Muted>סיכום השבוע · ניתוח מתקדם ב-Premium</T.Muted></View><Badge text="Premium" /></Row>
-      </Card>
-      <T.Caption style={{ marginTop: space.md, textAlign: 'center' }}>{doneAll.length} אימונים בסך הכל · {doneAll.reduce((m, x) => m + sessionVolume(x).sets, 0)} סטים</T.Caption>
+      <Tap onPress={() => router.push('/report')} label="דוח שבועי">
+        <View style={[styles.tile, { marginTop: space.lg, minHeight: 64 }]}>
+          <Row><Icon name="list" size={22} /><View style={{ flex: 1 }}><Text style={styles.tileTitle}>דוח שבועי</Text><T.Caption style={{ color: colors.text2 }}>סיכום · ניתוח מתקדם ב-Premium</T.Caption></View><Badge text="Premium" /></Row>
+        </View>
+      </Tap>
 
       <Sheet visible={weighSheet} onClose={() => setWeighSheet(false)} title="מדידת משקל">
         <Stepper label="משקל" value={kg} step={0.1} onChange={(v) => setKg(+v.toFixed(1))} unit="ק״ג" min={30} max={300} />
@@ -134,3 +119,53 @@ export default function Stats() {
     </HeroScreen>
   );
 }
+
+function StatTile({ icon, title, value, dot, target, unit, onPress }: { icon: IconName; title: string; value?: string; dot?: string; target?: string; unit?: string; onPress: () => void }) {
+  return (
+    <Tap onPress={onPress} label={`${title}: ${dot ?? value}${target ? ` מתוך ${target}` : ''} ${unit ?? ''}`} style={{ flex: 1 }}>
+      <View style={styles.tile}>
+        <LinearGradient colors={['rgba(232,120,42,0.14)', 'rgba(232,120,42,0.02)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Icon name="chevron" size={14} color={colors.text2} />
+          <View style={{ flex: 1, alignItems: 'flex-start', paddingHorizontal: 6, gap: 6, minWidth: 0 }}>
+            <Text style={styles.tileTitle} numberOfLines={2}>{title}</Text>
+            {dot != null ? (
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 6, alignSelf: 'flex-start' }}>
+                {unit ? <Text style={styles.unit}>{unit}</Text> : null}
+                <DotMatrix text={dot} dot={2.7} gap={1.25} />
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 4, alignSelf: 'flex-start' }}>
+                <Text style={styles.value}>{value}</Text>
+                {target ? <Text style={styles.unit}>/ {target}</Text> : null}
+                {unit ? <Text style={styles.unit}>{unit}</Text> : null}
+              </View>
+            )}
+          </View>
+          <Icon name={icon} size={24} color={colors.accentLight} />
+        </Row>
+      </View>
+    </Tap>
+  );
+}
+
+function GlowCard({ children, onPress, label }: { children: React.ReactNode; onPress: () => void; label: string }) {
+  return (
+    <Tap onPress={onPress} label={label}>
+      <View style={styles.glow}>
+        <LinearGradient colors={['rgba(232,120,42,0.18)', 'rgba(20,12,8,0.0)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 0.6 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        {children}
+      </View>
+    </Tap>
+  );
+}
+
+const styles = StyleSheet.create({
+  panelBox: { gap: 8, padding: 8, borderRadius: radius.xl, backgroundColor: 'rgba(40,22,12,0.55)', borderWidth: 1, borderColor: 'rgba(255,150,80,0.18)' },
+  tile: { minHeight: 82, paddingVertical: 12, paddingHorizontal: 9, borderRadius: radius.md, backgroundColor: 'rgba(30,17,10,0.9)', borderWidth: 1, borderColor: 'rgba(255,150,80,0.22)', overflow: 'hidden', justifyContent: 'center' },
+  tileTitle: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.text },
+  value: { fontFamily: fonts.semibold, fontSize: 17, color: colors.text, fontVariant: ['tabular-nums'] },
+  unit: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.text2 },
+  glow: { marginTop: space.md, padding: 16, borderRadius: radius.xl, backgroundColor: 'rgba(26,15,9,0.95)', borderWidth: 1, borderColor: 'rgba(232,120,42,0.4)', overflow: 'hidden' },
+  cardTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.text },
+});

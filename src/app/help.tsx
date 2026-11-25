@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Screen, Section, Card, T, Field, Button, Chip, Row, toast } from '@/components/ui';
 import { useApp } from '@/store/useApp';
 import { space } from '@/theme/tokens';
+import credits from '../../assets/credits.json';
 
 const FAQ: [string, string][] = [
   ['למה כתוב "לא מאומת" על מוצר?', 'ערכי המאגר הבסיסי הם ערכי ייחוס כלליים. למוצר ממותג יש לסרוק ברקוד או להזין מהתווית.'],
@@ -40,7 +41,15 @@ export default function Help() {
           <T.Muted>• נוסח משפטי מלא יפורסם לפני השקה.</T.Muted>
         </Card>
       </Section>
-      <T.Caption style={{ textAlign: 'center', marginTop: space.lg }}>MIZRAHI PINTO · גרסה 1.0.0</T.Caption>
+      <Section title="קרדיט תמונות">
+        <Card style={{ gap: 6 }}>
+          <T.Muted>איורי תרגילים: Everkinetic (CC BY-SA 3.0). תמונות מזון: Wikimedia Commons. כל התמונות ברישיון חופשי לשימוש מסחרי.</T.Muted>
+          {(credits.credits as { file: string; title: string; author: string; license: string; source: string }[]).map((c) => (
+            <T.Caption key={c.file}>{c.title.replace('File:', '')} · {c.author || 'לא צוין'} · {c.license}</T.Caption>
+          ))}
+        </Card>
+      </Section>
+      <T.Caption style={{ textAlign: 'center', marginTop: space.lg }}>MIZRAHI PINTO · גרסה 1.1.0</T.Caption>
     </Screen>
   );
 }

@@ -31,6 +31,24 @@ export const colors = {
   track: 'rgba(255, 255, 255, 0.08)',
 } as const;
 
+/** Light surfaces (workout detail, nutrition, add-food) – approved light mockups. */
+export const light = {
+  bg: '#F6F5F4',
+  card: '#FFFFFF',
+  cardSoft: '#F0EEEC',
+  border: 'rgba(20, 12, 6, 0.07)',
+  text: '#141010',
+  text2: '#6E6763',
+  text3: '#A39C98',
+  accent: '#F26B1D',
+  accentDeep: '#E2550A',
+  accentSoft: 'rgba(242, 107, 29, 0.12)',
+  track: '#ECE8E5',
+  protein: '#3BB273', // semantic macro colours from the mockup (not brand colours)
+  carbs: '#F26B1D',
+  fat: '#F2C230',
+} as const;
+
 export const radius = { xs: 8, sm: 12, md: 18, lg: 24, xl: 32, pill: 999 } as const;
 export const space = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 32 } as const;
 

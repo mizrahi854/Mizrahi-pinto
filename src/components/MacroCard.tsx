@@ -28,12 +28,12 @@ export function BentoTile({
 }
 
 /** Numeric line rendered physically left→right ("880 / 2,300 ג׳") regardless of RTL. */
-export function NumRow({ value, target, unit, size = 21 }: { value: string; target?: string; unit?: string; size?: number }) {
+export function NumRow({ value, target, unit, size = 21, small, color }: { value: string; target?: string; unit?: string; size?: number; small?: number; color?: string }) {
   return (
     <View style={styles.numRow}>
-      <Text style={[styles.value, { fontSize: size, flexShrink: 0 }]}>{value}</Text>
-      {target ? <Text style={styles.target}>{`/ ${target}`}</Text> : null}
-      {unit ? <Text style={styles.target}>{unit}</Text> : null}
+      <Text style={[styles.value, { fontSize: size, flexShrink: 0 }, color ? { color } : null]}>{value}</Text>
+      {target ? <Text style={[styles.target, small ? { fontSize: small } : null]}>{`/ ${target}`}</Text> : null}
+      {unit ? <Text style={[styles.target, small ? { fontSize: small } : null]}>{unit}</Text> : null}
     </View>
   );
 }

@@ -1,0 +1,147 @@
+{
+ "map": {
+  "bench": "bench-press",
+  "incline": "incline-bench-press",
+  "db_bench": "dumbbell-bench-press",
+  "ohp": "dumbbell-shoulder-press",
+  "curl": "biceps-curl",
+  "hammer": "biceps-curl",
+  "squat": "squats",
+  "goblet": "squats",
+  "bw_squat": "squats",
+  "rdl": "romanian-deadlift",
+  "deadlift": "romanian-deadlift",
+  "lunge": "walking-lunges",
+  "calf": "calf-raises",
+  "row": "reverse-grip-bent-over-rows",
+  "cable_fly": "cable-crossover"
+ },
+ "credits": [
+  {
+   "file": "assets/photos/cottage.jpg",
+   "title": "File:Cottagecheese200px.jpg",
+   "author": "FASTILY (TALK)",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Cottagecheese200px.jpg"
+  },
+  {
+   "file": "assets/photos/rice.jpg",
+   "title": "File:A bowl of rice.jpg",
+   "author": "Douglas Perkins",
+   "license": "CC0",
+   "source": "https://commons.wikimedia.org/wiki/File:A_bowl_of_rice.jpg"
+  },
+  {
+   "file": "assets/photos/tuna.jpg",
+   "title": "File:Buzzonaglia di tonno.JPG",
+   "author": "Diluviano at Italian Wikipedia",
+   "license": "Public domain",
+   "source": "https://commons.wikimedia.org/wiki/File:Buzzonaglia_di_tonno.JPG"
+  },
+  {
+   "file": "assets/photos/yogurt_berries.jpg",
+   "title": "File:Yogurt fruit bowl.jpg",
+   "author": "Jumbocombo0811",
+   "license": "CC BY-SA 4.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Yogurt_fruit_bowl.jpg"
+  },
+  {
+   "file": "assets/photos/avocado.jpg",
+   "title": "File:Persea americana from Canadian supermarket.jpg",
+   "author": "Wilfredor",
+   "license": "CC0",
+   "source": "https://commons.wikimedia.org/wiki/File:Persea_americana_from_Canadian_supermarket.jpg"
+  },
+  {
+   "file": "assets/photos/salmon.jpg",
+   "title": "File:Flame grilled salmon steaks (herb marinade recipe).jpg",
+   "author": "woodleywonderworks",
+   "license": "CC BY 2.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Flame_grilled_salmon_steaks_(herb_marinade_recipe).jpg"
+  },
+  {
+   "file": "assets/photos/protein_shake.jpg",
+   "title": "File:Protein shake.jpg",
+   "author": "Sandstein",
+   "license": "CC BY 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Protein_shake.jpg"
+  },
+  {
+   "file": "assets/exercises/bench-press.png",
+   "title": "File:Bench-press-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Bench-press-1.png"
+  },
+  {
+   "file": "assets/exercises/biceps-curl.png",
+   "title": "File:Biceps-curl-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Biceps-curl-1.png"
+  },
+  {
+   "file": "assets/exercises/cable-crossover.png",
+   "title": "File:Cable-crossover-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Cable-crossover-1.png"
+  },
+  {
+   "file": "assets/exercises/calf-raises.png",
+   "title": "File:Calf-raises-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Calf-raises-1.png"
+  },
+  {
+   "file": "assets/exercises/dumbbell-bench-press.png",
+   "title": "File:Dumbbell-bench-press-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Dumbbell-bench-press-1.png"
+  },
+  {
+   "file": "assets/exercises/dumbbell-shoulder-press.png",
+   "title": "File:Dumbbell-shoulder-press-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Dumbbell-shoulder-press-1.png"
+  },
+  {
+   "file": "assets/exercises/incline-bench-press.png",
+   "title": "File:Incline-bench-press-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Incline-bench-press-1.png"
+  },
+  {
+   "file": "assets/exercises/reverse-grip-bent-over-rows.png",
+   "title": "File:Reverse-grip-bent-over-rows-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Reverse-grip-bent-over-rows-1.png"
+  },
+  {
+   "file": "assets/exercises/romanian-deadlift.png",
+   "title": "File:Romanian-deadlift-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Romanian-deadlift-1.png"
+  },
+  {
+   "file": "assets/exercises/squats.png",
+   "title": "File:Squats-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Squats-1.png"
+  },
+  {
+   "file": "assets/exercises/walking-lunges.png",
+   "title": "File:Walking-lunges-1.png",
+   "author": "Everkinetic",
+   "license": "CC BY-SA 3.0",
+   "source": "https://commons.wikimedia.org/wiki/File:Walking-lunges-1.png"
+  }
+ ]
+}
