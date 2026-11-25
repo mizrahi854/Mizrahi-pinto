@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,7 +77,7 @@ export default function ActiveWorkout() {
         <HeroBackdrop height={320} figure={false} />
         <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 120, paddingHorizontal: space.md }}>
           <Row style={{ justifyContent: 'space-between' }}>
-            <IconButton icon="chevronBack" label="מזעור (האימון ממשיך)" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} size={42} />
+            <IconButton icon="chevronBack" label="מזעור (האימון ממשיך)" onPress={() => goBack()} size={42} />
             <T.H>{session.name}</T.H>
             <IconButton icon="close" label="סיום אימון" onPress={() => setConfirmEnd(true)} size={42} />
           </Row>

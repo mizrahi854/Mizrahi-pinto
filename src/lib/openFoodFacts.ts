@@ -17,6 +17,8 @@ type OFFProduct = {
   allergens_tags?: string[];
   nutriments?: Record<string, number | string | undefined>;
   nutrition_data_per?: string;
+  serving_quantity?: number | string;
+  product_quantity?: number | string;
 };
 
 const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)) ? Number(v) : null);
@@ -41,11 +43,12 @@ export function mapOFF(p: OFFProduct): Food | null {
     category: 'custom',
     basis: liquid ? 'ml' : 'g',
     per100: hasAny ? per100 : null,
-    portions: [],
+    portions: num(p.serving_quantity) && num(p.serving_quantity)! < 2000 ? [{ label: 'מנה לפי היצרן', grams: num(p.serving_quantity)! }] : [],
+    packageSize: num(p.product_quantity) && num(p.product_quantity)! < 10000 ? num(p.product_quantity)! : undefined,
     barcode: p.code,
     imageUrl: p.image_front_url,
     allergens: (p.allergens_tags ?? []).map((a) => a.replace(/^..:/, '')),
-    source: 'Open Food Facts (נתוני קהילה, ODbL) – יש לוודא מול התווית',
+    source: 'Open Food Facts – נתוני תווית שהוזנו על ידי הקהילה (ODbL, תמונות CC BY-SA)',
     verified: false,
   };
 }
@@ -66,7 +69,7 @@ async function get(path: string, signal?: AbortSignal) {
 export async function lookupBarcode(code: string): Promise<Food | null> {
   const clean = code.replace(/\D/g, '');
   if (clean.length < 6) throw new Error('ברקוד לא תקין');
-  const data = await get(`/api/v2/product/${clean}.json?fields=code,product_name,product_name_he,brands,quantity,image_front_url,allergens_tags,nutriments`);
+  const data = await get(`/api/v2/product/${clean}.json?fields=code,product_name,product_name_he,brands,quantity,serving_quantity,product_quantity,image_front_url,allergens_tags,nutriments`);
   if (data?.status !== 1 || !data.product) return null;
   return mapOFF({ ...data.product, code: clean });
 }
@@ -74,7 +77,7 @@ export async function lookupBarcode(code: string): Promise<Food | null> {
 export async function searchOFF(q: string, page = 1, signal?: AbortSignal): Promise<Food[]> {
   if (q.trim().length < 2) return [];
   const data = await get(
-    `/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&json=1&page_size=20&page=${page}&countries_tags_en=israel&fields=code,product_name,product_name_he,brands,quantity,image_front_url,allergens_tags,nutriments`,
+    `/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&json=1&page_size=20&page=${page}&countries_tags_en=israel&fields=code,product_name,product_name_he,brands,quantity,serving_quantity,product_quantity,image_front_url,allergens_tags,nutriments`,
     signal,
   );
   return ((data?.products ?? []) as OFFProduct[]).map(mapOFF).filter((f): f is Food => !!f);

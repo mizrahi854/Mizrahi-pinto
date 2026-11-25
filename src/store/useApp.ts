@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
+  BasketItem,
   Challenge, Food, FoodEntry, MealKey, Profile, Reminder, SavedMeal, TargetHistory, WorkoutPlan, WorkoutSession, PlanExercise,
 } from '@/data/types';
 import { STARTER_FOODS } from '@/data/foods';
+import { IL_PRODUCTS } from '@/data/ilProducts';
 import { PLANS, planById } from '@/data/exercises';
 import { dateKey, nowTime, uid } from '@/lib/dates';
-import { nutrientsFor } from '@/lib/nutrition';
+import { nutrientsFor, sumNutrients } from '@/lib/nutrition';
 
 export const DEFAULT_MEALS: { key: MealKey; label: string; icon: 'bowl' | 'food' | 'moon' | 'star' }[] = [
   { key: 'breakfast', label: 'ארוחת בוקר', icon: 'bowl' },
@@ -39,6 +41,8 @@ type State = {
   entries: FoodEntry[];
   favorites: string[];
   recentFoodIds: string[];
+  basket: BasketItem[];
+  searchHistory: string[];
   savedMeals: SavedMeal[];
   mealPlan: Record<string, Record<string, string>>; // date -> meal -> recipeId
   shopping: { id: string; name: string; qty: string; checked: boolean; recipeId?: string }[];
@@ -64,6 +68,17 @@ type State = {
   updateProfile: (p: Partial<Profile>) => void;
   setTargets: (t: Pick<Profile, 'targetMode' | 'calorieTarget' | 'proteinTarget' | 'carbsTarget' | 'fatTarget'>) => void;
   addCustomMeal: (label: string) => void;
+  basketAdd: (i: Omit<BasketItem, 'key'>) => void;
+  basketUpdate: (key: string, patch: Partial<BasketItem>) => void;
+  basketRemove: (key: string) => void;
+  basketClear: () => void;
+  logBasket: (o: { meal: MealKey; date: string; asOne?: string; time?: string }) => number;
+  saveBasketAsMeal: (name: string) => string;
+  updateSavedMeal: (id: string, patch: Partial<SavedMeal>) => void;
+  basketFromSavedMeal: (id: string) => void;
+  copyMeal: (fromDate: string, meal: MealKey, toDate: string, toMeal?: MealKey) => number;
+  addSearch: (q: string) => void;
+  clearSearchHistory: () => void;
 
   addEntry: (e: Omit<FoodEntry, 'id' | 'createdAt' | 'time'> & { time?: string }) => FoodEntry;
   addFoodToLog: (food: Food, amount: number, unitLabel: string, meal: MealKey, date?: string, grams?: number) => FoodEntry;
@@ -121,6 +136,8 @@ const initialData = {
   entries: [] as FoodEntry[],
   favorites: [] as string[],
   recentFoodIds: [] as string[],
+  basket: [] as BasketItem[],
+  searchHistory: [] as string[],
   savedMeals: [] as SavedMeal[],
   mealPlan: {},
   shopping: [],
@@ -168,12 +185,65 @@ export const useApp = create<State>()(
       addCustomMeal: (label) => set((s) => ({ customMeals: [...s.customMeals, { key: `m_${uid()}`, label }] })),
 
       addEntry: (e) => {
+        // double-tap guard: an identical entry saved within 1.2s is ignored
+        const dup = get().entries.find((x) => Date.now() - x.createdAt < 1200 && x.name === e.name && x.date === e.date && x.meal === e.meal && x.amount === e.amount && x.nutrients.kcal === e.nutrients.kcal);
+        if (dup) return dup;
         const entry: FoodEntry = { ...e, id: uid(), createdAt: Date.now(), time: e.time ?? nowTime() };
-        set((s) => ({ entries: [...s.entries, entry] }));
+        set((s) => ({ entries: [...s.entries, entry], recentFoodIds: e.foodId ? [e.foodId, ...s.recentFoodIds.filter((x) => x !== e.foodId)].slice(0, 20) : s.recentFoodIds }));
         return entry;
       },
+      basketAdd: (i) => set((s) => ({ basket: [...s.basket, { ...i, key: uid() }] })),
+      basketUpdate: (key, patch) => set((s) => ({ basket: s.basket.map((b) => (b.key === key ? { ...b, ...patch } : b)) })),
+      basketRemove: (key) => set((s) => ({ basket: s.basket.filter((b) => b.key !== key) })),
+      basketClear: () => set({ basket: [] }),
+      logBasket: ({ meal, date, asOne, time }) => {
+        const items = get().basket;
+        if (!items.length) return 0;
+        const now = Date.now();
+        const t = time ?? nowTime();
+        let add: FoodEntry[];
+        if (asOne) {
+          const tot = sumNutrients(items.map((i) => i.nutrients));
+          add = [{
+            id: uid(), createdAt: now, time: t, date, meal, name: asOne, amount: 1, unitLabel: 'ארוחה',
+            grams: items.every((i) => i.grams != null) ? Math.round(items.reduce((m, i) => m + (i.grams ?? 0), 0)) : null,
+            nutrients: { kcal: tot.partial.kcal ? null : tot.kcal, protein: tot.partial.protein ? null : tot.protein, carbs: tot.partial.carbs ? null : tot.carbs, fat: tot.partial.fat ? null : tot.fat, fiber: tot.partial.fiber ? null : tot.fiber },
+            items: items.map(({ foodId, name, amount, unitLabel, grams, nutrients }) => ({ foodId, name, amount, unitLabel, grams, nutrients })),
+          }];
+        } else {
+          add = items.map((i) => ({ id: uid(), createdAt: now, time: t, date, meal, foodId: i.foodId, name: i.name, amount: i.amount, unitLabel: i.unitLabel, grams: i.grams, nutrients: i.nutrients, photoUri: i.imageUrl }));
+        }
+        const ids = items.map((i) => i.foodId).filter((x): x is string => !!x);
+        set((s) => ({ entries: [...s.entries, ...add], basket: [], recentFoodIds: [...ids, ...s.recentFoodIds.filter((x) => !ids.includes(x))].slice(0, 20) }));
+        return items.length;
+      },
+      saveBasketAsMeal: (name) => {
+        const id = uid();
+        set((s) => ({ savedMeals: [...s.savedMeals, { id, name, items: s.basket.map(({ foodId, name: n, amount, unitLabel, grams, nutrients, imageUrl }) => ({ foodId, name: n, amount, unitLabel, grams, nutrients, photoUri: imageUrl })) }] }));
+        return id;
+      },
+      updateSavedMeal: (id, patch) => set((s) => ({ savedMeals: s.savedMeals.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
+      basketFromSavedMeal: (id) => {
+        const m = get().savedMeals.find((x) => x.id === id);
+        if (!m) return;
+        set((s) => ({ basket: [...s.basket, ...m.items.map((i) => ({ key: uid(), foodId: i.foodId, name: i.name, amount: i.amount, unitLabel: i.unitLabel, unitGrams: i.grams != null && i.amount ? i.grams / i.amount : null, grams: i.grams, nutrients: i.nutrients, imageUrl: i.photoUri }))] }));
+      },
+      copyMeal: (fromDate, meal, toDate, toMeal) => {
+        const src = get().entries.filter((e) => e.date === fromDate && e.meal === meal);
+        const now = Date.now();
+        set((s) => ({ entries: [...s.entries, ...src.map((e, i) => ({ ...e, id: uid(), date: toDate, meal: toMeal ?? meal, createdAt: now + i }))] }));
+        return src.length;
+      },
+      addSearch: (q) => {
+        const t = q.trim();
+        if (t.length < 2) return;
+        set((s) => ({ searchHistory: [t, ...s.searchHistory.filter((x) => x !== t)].slice(0, 12) }));
+      },
+      clearSearchHistory: () => set({ searchHistory: [] }),
       addFoodToLog: (food, amount, unitLabel, meal, date = dateKey(), grams) => {
         const base = grams ?? amount;
+        const dup = get().entries.find((x) => Date.now() - x.createdAt < 1200 && x.foodId === food.id && x.date === date && x.meal === meal && x.grams === base);
+        if (dup) return dup;
         const entry: FoodEntry = {
           id: uid(), createdAt: Date.now(), time: nowTime(), date, meal, foodId: food.id, name: food.name, amount, unitLabel,
           grams: base, nutrients: nutrientsFor(food, base), photoUri: food.imageUrl,
@@ -311,7 +381,7 @@ export function buildSchedule(p: Pick<Profile, 'trainingDays' | 'experience' | '
   return out;
 }
 
-export const allFoods =(userFoods: Food[]) => [...userFoods, ...STARTER_FOODS];
+export const allFoods = (userFoods: Food[]) => [...userFoods, ...STARTER_FOODS, ...IL_PRODUCTS];
 export const findFood = (id: string | undefined, userFoods: Food[]) => (id ? allFoods(userFoods).find((f) => f.id === id) : undefined);
 
 /** Target active on a given date (history aware). */

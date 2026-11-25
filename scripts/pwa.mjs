@@ -2,7 +2,8 @@
 // - manifest + apple meta tags (Add to Home Screen → full screen, icon, name)
 // - viewport-fit=cover so safe-area insets (Dynamic Island / home indicator) work
 // - 404.html = index.html so deep links work on GitHub Pages; .nojekyll keeps the _expo folder
-import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const DIST = 'dist';
@@ -53,6 +54,36 @@ const head = `
 <style>html,body{background:#070403;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}</style>
 `;
 html = html.replace('</head>', `${head}</head>`);
+writeFileSync(`${DIST}/index.html`, html);
+// ---- offline: service worker precaching the whole export (app shell, JS, fonts, images) ----
+const walk = (dir) => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+const files = walk(DIST).map((f) => '/' + relative(DIST, f).split('\\').join('/')).filter((f) => !f.endsWith('.map') && f !== '/404.html' && f !== '/sw.js');
+const version = Date.now().toString(36);
+writeFileSync(`${DIST}/sw.js`, `
+const CACHE = 'mp-${version}';
+const BASE = '${BASE}';
+const PRECACHE = ${JSON.stringify(files)}.map((f) => BASE + f);
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting())); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k.startsWith('mp-')).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).catch(() => caches.match(BASE + '/index.html')));
+    return;
+  }
+  if (url.origin === location.origin) {
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res; })));
+    return;
+  }
+  // product images (Open Food Facts): cache on first view so they work offline later
+  if (url.hostname === 'images.openfoodfacts.org') {
+    e.respondWith(caches.open('mp-img').then((c) => c.match(req).then((hit) => hit || fetch(req).then((res) => { c.put(req, res.clone()); return res; }).catch(() => hit))));
+  }
+});
+`);
+html = html.replace('</body>', `<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('${BASE}/sw.js',{scope:'${BASE}/'}).catch(function(){})})}</script></body>`);
 writeFileSync(`${DIST}/index.html`, html);
 writeFileSync(`${DIST}/404.html`, html);
 writeFileSync(`${DIST}/.nojekyll`, '');

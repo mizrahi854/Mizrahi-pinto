@@ -1,48 +1,68 @@
 import React, { ReactNode } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
-import { router } from 'expo-router';
+import { goBack } from '@/lib/nav';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, KeyboardAvoidingView } from 'react-native';
+
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Tap } from './ui';
 import { Icon, IconName } from './Icon';
-import { MAX_W } from './Brand';
+import { MAX_W, HeroBackdrop, useScreenWidth } from './Brand';
 import { light, fonts, radius, space } from '@/theme/tokens';
 import { haptic } from '@/lib/haptics';
 
 /** Light surface kit for the approved white screens (workout detail, nutrition, add food). */
 export function LightScreen({
-  title, children, back = true, right, footer, tabBar = false, scroll = true,
-}: { title: string; children: ReactNode; back?: boolean; right?: ReactNode; footer?: ReactNode; tabBar?: boolean; scroll?: boolean }) {
+  title, subtitle, children, back = true, right, footer, tabBar = false, scroll = true, hero, heroHeight = 0,
+}: { title: string; subtitle?: string; children: ReactNode; back?: boolean; right?: ReactNode; footer?: ReactNode; tabBar?: boolean; scroll?: boolean; hero?: ReactNode; heroHeight?: number }) {
   const insets = useSafeAreaInsets();
+  const w = useScreenWidth();
   const bottomPad = insets.bottom + (footer ? 110 : 0) + (tabBar ? 110 : 30);
+  const topH = insets.top + 76 + (subtitle ? 20 : 0) + heroHeight;
+  const header = (
+    <View style={{ height: topH + 28 }}>
+      <HeroBackdrop height={topH + 60} figure={false} />
+      <View style={[s.header, { paddingTop: insets.top + 8 }]}>
+        <View style={s.side}>{back ? <LIconButton dark icon="chevronBack" label="חזרה" onPress={() => goBack()} /> : null}</View>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={s.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
+          {subtitle ? <Text style={s.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+        </View>
+        <View style={[s.side, { alignItems: 'flex-end' }]}>{right}</View>
+      </View>
+      {hero ? <View style={{ paddingHorizontal: space.md }}>{hero}</View> : null}
+    </View>
+  );
   return (
     <View style={s.root}>
-      <StatusBar style="dark" />
-      <View style={s.inner}>
-        <View style={[s.header, { paddingTop: insets.top + 8 }]}>
-          <View style={s.side}>{back ? <LIconButton icon="chevronBack" label="חזרה" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} /> : null}</View>
-          <Text style={s.title} accessibilityRole="header" numberOfLines={1}>{title}</Text>
-          <View style={[s.side, { alignItems: 'flex-end' }]}>{right}</View>
-        </View>
+      <StatusBar style="light" />
+      <View style={[s.inner, { width: w }]}>
         {scroll ? (
-          <ScrollView contentContainerStyle={{ paddingHorizontal: space.md, paddingBottom: bottomPad, paddingTop: 4 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            {children}
+          <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} stickyHeaderIndices={undefined}>
+            {header}
+            <View style={s.body}>{children}</View>
           </ScrollView>
         ) : (
-          <View style={{ flex: 1, paddingHorizontal: space.md }}>{children}</View>
+          <View style={{ flex: 1 }}>
+            {header}
+            <View style={[s.body, { flex: 1 }]}>{children}</View>
+          </View>
         )}
-        {footer && <View style={[s.footer, { paddingBottom: insets.bottom + 14, bottom: tabBar ? 96 : 0 }]}>{footer}</View>}
+        {footer && (
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[s.footerWrap, { bottom: tabBar ? 96 : 0 }]} pointerEvents="box-none">
+            <View style={[s.footer, { paddingBottom: tabBar ? 10 : insets.bottom + 14 }]}>{footer}</View>
+          </KeyboardAvoidingView>
+        )}
       </View>
     </View>
   );
 }
 
-export function LIconButton({ icon, label, onPress, active }: { icon: IconName; label: string; onPress?: () => void; active?: boolean }) {
+export function LIconButton({ icon, label, onPress, active, dark = true }: { icon: IconName; label: string; onPress?: () => void; active?: boolean; dark?: boolean }) {
   return (
     <Tap onPress={onPress} label={label}>
-      <View style={[s.iconBtn, active && { backgroundColor: light.accentSoft }]}><Icon name={icon} size={24} color={active ? light.accent : light.text} strokeWidth={1.9} /></View>
+      <View style={[s.iconBtn, dark && s.iconBtnDark, active && { backgroundColor: light.accentSoft }]}><Icon name={icon} size={23} color={dark ? '#fff' : active ? light.accent : light.text} strokeWidth={1.9} /></View>
     </Tap>
   );
 }
@@ -129,11 +149,14 @@ export const ls = StyleSheet.create({
 const shadow = Platform.OS === 'web' ? ({ boxShadow: '0 6px 20px rgba(30,20,10,0.06)' } as any) : { shadowColor: '#2a1a0a', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 };
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#E9E6E3', alignItems: 'center' },
-  inner: { flex: 1, width: '100%', maxWidth: MAX_W, backgroundColor: light.bg, overflow: 'hidden' },
+  root: { flex: 1, backgroundColor: '#070403', alignItems: 'center' },
+  inner: { flex: 1, maxWidth: MAX_W, backgroundColor: '#0B0705', overflow: 'hidden' },
+  body: { backgroundColor: light.bg, borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: -28, paddingHorizontal: space.md, paddingTop: space.lg, minHeight: 600 },
+  subtitle: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
+  iconBtnDark: { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.2)' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, paddingBottom: 10 },
   side: { width: 52 },
-  title: { flex: 1, textAlign: 'center', fontFamily: fonts.bold, fontSize: 26, color: light.text },
+  title: { textAlign: 'center', fontFamily: fonts.bold, fontSize: 24, color: '#fff' },
   iconBtn: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: light.card, borderRadius: radius.lg, padding: space.md, ...shadow },
   seg: { flexDirection: 'row', backgroundColor: light.cardSoft, borderRadius: radius.pill, padding: 4 },
@@ -142,5 +165,6 @@ const s = StyleSheet.create({
   segText: { fontFamily: fonts.medium, fontSize: 16, color: light.text2 },
   primary: { height: 60, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, overflow: 'hidden' },
   primaryText: { fontFamily: fonts.bold, fontSize: 19, color: '#fff' },
-  footer: { position: 'absolute', left: 0, right: 0, paddingHorizontal: space.md, paddingTop: 10, backgroundColor: 'rgba(246,245,244,0.92)' },
+  footerWrap: { position: 'absolute', left: 0, right: 0 },
+  footer: { paddingHorizontal: space.md, paddingTop: 10, backgroundColor: 'rgba(246,245,244,0.94)' },
 });

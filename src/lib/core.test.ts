@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nutrientsFor, sumNutrients, validateNutrients, estimateMaintenance, isAdult, defaultMacros } from './nutrition';
 import { dateKey, addDays, diffDays, weekOf, parseKey } from './dates';
-import { searchLocal } from './search';
+import { searchLocal , editDistance, norm } from './search';
 import { STARTER_FOODS } from '../data/foods';
 import { RECIPES } from '../data/recipes';
 import { EXERCISES, PLANS } from '../data/exercises';
@@ -11,7 +11,9 @@ import { recipeNutrients } from './recipes';
 import { personalRecords } from './records';
 import { challengeStats } from './challenge';
 import { sessionVolume, aggregate } from './stats';
-import type { WorkoutSession, Challenge } from '../data/types';
+import type { WorkoutSession, Challenge , FoodEntry } from '../data/types';
+
+import { unitsFor, baseQuantity, computeFoodEntry, rescale, periodSummary, frequentFoodIds } from './engine';
 
 test('per-100 scaling: value = per100 × amount / 100', () => {
   const n = nutrientsFor({ per100: { kcal: 95, protein: 11, carbs: 1.5, fat: 5, fiber: null } }, 250);
@@ -120,4 +122,40 @@ test('aggregate ignores missing days', () => {
   const a = aggregate([{ value: 100 }, { value: null }, { value: 300 }]);
   assert.equal(a.avg, 200);
   assert.equal(a.count, 2);
+});
+
+test('engine: units, grams/portions/package, no ml↔g conversion', () => {
+  const cottage = STARTER_FOODS.find((f) => f.id === 'f002')!;
+  const u = unitsFor({ ...cottage, packageSize: 750 });
+  assert.equal(u[0]!.grams, null);
+  assert.ok(u.some((x) => x.label === 'אריזה שלמה' && x.grams === 750));
+  assert.equal(baseQuantity(2, { label: 'גביע', grams: 250 }), 500);
+  assert.equal(baseQuantity(150, { label: 'ג׳', grams: null }), 150);
+  const e = computeFoodEntry(cottage, 1.5, { label: 'גביע', grams: 250 });
+  assert.equal(e.grams, 375);
+  assert.equal(e.nutrients.kcal, 356); // 95 × 3.75
+  const milk = STARTER_FOODS.find((f) => f.basis === 'ml')!;
+  assert.equal(computeFoodEntry(milk, 200, { label: 'מ״ל', grams: null }).grams, 200);
+});
+
+test('engine: rescale keeps unknowns unknown; period average ignores missing days', () => {
+  const r = rescale({ kcal: 100, protein: 10, carbs: null, fat: 2.5, fiber: null }, 1.5);
+  assert.deepEqual(r, { kcal: 150, protein: 15, carbs: null, fat: 3.8, fiber: null });
+  const mk = (date: string, kcal: number | null): FoodEntry => ({ id: date + kcal, date, meal: 'lunch', name: 'x', amount: 1, unitLabel: 'מנה', grams: null, nutrients: { kcal, protein: 1, carbs: 1, fat: 1 }, time: '12:00', createdAt: 0, foodId: kcal ? 'f001' : 'f002' });
+  const p = periodSummary([mk('2026-01-01', 1000), mk('2026-01-03', 2000), mk('2026-01-03', null)], ['2026-01-01', '2026-01-02', '2026-01-03']);
+  assert.equal(p.loggedDays, 2);
+  assert.equal(p.avg.kcal, 1500);
+  assert.equal(p.total.partial.kcal, true);
+  assert.deepEqual(frequentFoodIds([mk('a', 1), mk('b', 1), mk('c', null)]), ['f001', 'f002']);
+});
+
+test('search: typo tolerance, finals, brand and barcode', () => {
+  assert.equal(norm('שוֹקוֹלָד'), 'שוקולד');
+  assert.equal(norm('לחם'), 'לחמ');
+  assert.ok(editDistance('קוטגג', 'קוטג') <= 1);
+  assert.equal(searchLocal(STARTER_FOODS, 'בננא')[0]?.name, 'בננה');
+  assert.equal(searchLocal(STARTER_FOODS, 'חזה עופ')[0]?.name.startsWith('חזה עוף'), true);
+  const withBrand = [{ ...STARTER_FOODS[0]!, id: 'x', name: 'יוגורט', brand: 'דנונה', barcode: '7290000000001' }];
+  assert.equal(searchLocal(withBrand, 'דנונה').length, 1);
+  assert.equal(searchLocal(withBrand, '72900000').length, 1);
 });

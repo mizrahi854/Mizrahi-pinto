@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,7 +78,7 @@ export default function Onboarding() {
     if (step === 'target' && p.targetMode === 'calculated' && !est) return toast('כדי לחשב אומדן יש להזין גובה, משקל ומין במסך הקודם');
     setI((x) => Math.min(steps.length - 1, x + 1));
   };
-  const back = () => (i === 0 ? (router.canGoBack() ? router.back() : null) : setI(i - 1));
+  const back = () => (i === 0 ? (editing ? goBack('/(tabs)/profile') : goBack('/welcome')) : setI(i - 1));
 
   const finish = () => {
     const final: Profile = { ...p, workoutsPerWeek: p.trainingDays.length };
@@ -87,7 +88,7 @@ export default function Onboarding() {
       setTargets({ targetMode: final.targetMode, calorieTarget: final.calorieTarget, proteinTarget: final.proteinTarget, carbsTarget: final.carbsTarget, fatTarget: final.fatTarget });
       useApp.setState({ schedule: buildSchedule(final) });
       toast('התוכנית עודכנה');
-      router.back();
+      goBack();
     } else {
       complete(final);
       router.replace('/(tabs)');

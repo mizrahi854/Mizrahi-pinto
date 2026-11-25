@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { HeroBackdrop, Logo, SideRulers, WaveHeader, useScreenWidth } from './Brand';
@@ -30,7 +31,7 @@ export function HeroScreen({
             <HeroBackdrop height={heroHeight + insets.top + 60} />
             <SideRulers top={insets.top + 80} height={heroHeight - 120} />
             <View style={[styles.topRow, { paddingTop: insets.top + 10 }]}>
-              {back ? <IconButton icon="chevronBack" label="חזרה" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} size={44} /> : <Logo />}
+              {back ? <IconButton icon="chevronBack" label="חזרה" onPress={() => goBack()} size={44} /> : <Logo />}
               {menu ? <IconButton icon="dots" label="אפשרויות" onPress={menu} size={48} /> : <View style={{ width: 48 }} />}
             </View>
             <Animated.View entering={reduce ? undefined : FadeInDown.duration(450)} style={styles.center}>

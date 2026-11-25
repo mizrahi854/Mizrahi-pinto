@@ -1,10 +1,11 @@
 import React, { ReactNode, useEffect, useState } from 'react';
+import { goBack } from '@/lib/nav';
 import {
-  View, Text, Pressable, StyleSheet, ScrollView, TextInput, TextInputProps, ViewStyle, StyleProp, Modal, ActivityIndicator, Platform,
+  View, Text, Pressable, StyleSheet, ScrollView, TextInput, TextInputProps, ViewStyle, StyleProp, Modal, ActivityIndicator, Platform, PanResponder, KeyboardAvoidingView,
 } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, FadeIn, FadeOut, SlideInDown, SlideOutDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+
 import Svg, { Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, space, type, fonts, touch } from '@/theme/tokens';
@@ -146,7 +147,7 @@ export function Screen({
   const insets = useSafeAreaInsets();
   const header = (title || back || right) && (
     <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.headerSide}>{back && <IconButton icon="chevronBack" label="חזרה" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} size={40} />}</View>
+      <View style={styles.headerSide}>{back && <IconButton icon="chevronBack" label="חזרה" onPress={() => goBack()} size={40} />}</View>
       <View style={{ flex: 1, alignItems: 'center' }}>
         {title && <Text accessibilityRole="header" style={styles.headerTitle} numberOfLines={1}>{title}</Text>}
         {subtitle && <Text style={styles.headerSub} numberOfLines={1}>{subtitle}</Text>}
@@ -265,21 +266,45 @@ export function Badge({ text, tone = 'accent' }: { text: string; tone?: 'accent'
 }
 
 /* ---------- Bottom sheet ---------- */
-export function Sheet({ visible, onClose, title, children }: { visible: boolean; onClose: () => void; title?: string; children: ReactNode }) {
+/** Drag-down-to-dismiss behaviour shared by all bottom sheets. */
+export function useDragToClose(onClose: () => void) {
+  const y = useSharedValue(0);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  const responder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderMove: (_, g) => { y.set(Math.max(0, g.dy)); },
+        onPanResponderRelease: (_, g) => {
+          if (g.dy > 110 || g.vy > 0.9) { haptic.tap(); onClose(); setTimeout(() => { y.set(0); }, 260); }
+          else y.set(withSpring(0, { damping: 18 }));
+        },
+        onPanResponderTerminate: () => { y.set(withSpring(0)); },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onClose],
+  );
+  return { style, handlers: responder.panHandlers };
+}
+
+export function Sheet({ visible, onClose, title, children, scroll }: { visible: boolean; onClose: () => void; title?: string; children: ReactNode; scroll?: boolean }) {
   const insets = useSafeAreaInsets();
+  const drag = useDragToClose(onClose);
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       {visible && (
-        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-          <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(160)} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-            <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="סגור" accessibilityRole="button" />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Animated.View entering={FadeIn.duration(160)} exiting={FadeOut.duration(140)} style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
+            <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="סגירה" accessibilityRole="button" />
           </Animated.View>
-          <Animated.View entering={SlideInDown.springify().damping(20)} exiting={SlideOutDown.duration(200)} style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-            <View style={styles.grabber} />
-            {title && <T.Title style={{ textAlign: 'center', marginBottom: space.md }}>{title}</T.Title>}
-            {children}
+          <Animated.View entering={SlideInDown.springify().damping(22)} exiting={SlideOutDown.duration(180)} style={[styles.sheet, { paddingBottom: insets.bottom + 16, maxHeight: '88%' }, drag.style]} accessibilityViewIsModal>
+            <View {...drag.handlers} style={{ paddingBottom: 4 }}>
+              <View style={styles.grabber} accessibilityLabel="גרירה למטה לסגירה" />
+              {title && <T.Title style={{ textAlign: 'center', marginBottom: space.md }}>{title}</T.Title>}
+            </View>
+            {scroll ? <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>{children}</ScrollView> : children}
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       )}
     </Modal>
   );

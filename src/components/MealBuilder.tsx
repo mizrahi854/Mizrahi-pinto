@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
-import { router } from 'expo-router';
+
 import { Image } from 'expo-image';
 import { Screen, Field, Button, Chip, Row, T, Card, IconButton, Stepper, toast, Tap, Divider } from './ui';
 import { Icon } from './Icon';
@@ -55,7 +56,7 @@ export function MealBuilder({ title, photo }: { title: string; photo?: string })
     }
     haptic.success();
     toast('הארוחה נוספה ליומן');
-    router.back();
+    goBack();
   };
 
   return (

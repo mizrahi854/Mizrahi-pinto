@@ -5,10 +5,11 @@ import { Image } from 'expo-image';
 import { LightScreen, LCard, Segmented, LPrimary, LIconButton, ArcGauge, LBar, ls } from '@/components/light';
 import { Tap, Row, Sheet, ListItem } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
-import { useApp, targetFor } from '@/store/useApp';
+import { useApp, targetFor , findFood } from '@/store/useApp';
 import { useMeals } from '@/store/selectors';
 import { dateKey, weekOf, addDays } from '@/lib/dates';
 import { sumNutrients, isAdult, fmt } from '@/lib/nutrition';
+import { periodSummary } from '@/lib/engine';
 import { MEAL_PHOTO } from '@/data/media';
 import { light, fonts, radius, space } from '@/theme/tokens';
 
@@ -28,12 +29,11 @@ export default function Nutrition() {
   const hasTarget = adult && profile.targetMode !== 'none' && t.calorieTarget != null;
 
   const days = useMemo(() => (period === 'day' ? [today] : period === 'week' ? weekOf(today).filter((d) => d <= today) : Array.from({ length: 30 }, (_, i) => addDays(today, -29 + i))), [period, today]);
+  // single source of truth: the central engine (same numbers as home, diary and stats)
   const view = useMemo(() => {
-    const perDay = days.map((d) => entries.filter((e) => e.date === d)).filter((l) => l.length > 0);
-    const all = sumNutrients(perDay.flat().map((e) => e.nutrients));
-    const n = Math.max(1, perDay.length);
-    const avg = (v: number) => (period === 'day' ? v : v / n);
-    return { kcal: Math.round(avg(all.kcal)), protein: avg(all.protein), carbs: avg(all.carbs), fat: avg(all.fat), logged: perDay.length, partial: all.partial };
+    const p = periodSummary(entries, days);
+    const v = period === 'day' ? p.total : p.avg;
+    return { kcal: Math.round(v.kcal), protein: v.protein, carbs: v.carbs, fat: v.fat, logged: p.loggedDays, partial: p.total.partial };
   }, [days, entries, period]);
   const todayList = entries.filter((e) => e.date === today);
   const remaining = hasTarget ? t.calorieTarget! - view.kcal : null;
@@ -64,6 +64,8 @@ export default function Nutrition() {
         <Macro icon="wheat" title="פחמימות" value={view.carbs} target={t.carbsTarget} color={light.carbs} onPress={() => router.push('/macro/carbs')} partial={view.partial.carbs} />
         <Macro icon="protein" title="חלבון" value={view.protein} target={t.proteinTarget} color={light.protein} onPress={() => router.push('/macro/protein')} partial={view.partial.protein} />
       </Row>
+
+      {!adult && <Variety list={todayList} />}
 
       <Row style={{ justifyContent: 'space-between', marginTop: space.xl, marginBottom: space.sm }}>
         <Text style={ls.h2}>הארוחות של היום</Text>
@@ -101,6 +103,38 @@ export default function Nutrition() {
   );
 }
 
+const GROUPS: { key: string; label: string; icon: IconName; cats: string[] }[] = [
+  { key: 'protein', label: 'חלבון', icon: 'protein', cats: ['meat', 'eggs', 'protein'] },
+  { key: 'dairy', label: 'חלב', icon: 'drop', cats: ['dairy'] },
+  { key: 'grains', label: 'דגנים', icon: 'wheat', cats: ['carbs', 'bread'] },
+  { key: 'produce', label: 'פירות וירקות', icon: 'sparkle', cats: ['produce'] },
+  { key: 'fats', label: 'שומנים טובים', icon: 'fat', cats: ['fats'] },
+];
+
+/** Under-18 view: variety and regular meals – no calorie budget. */
+function Variety({ list }: { list: { foodId?: string; meal: string }[] }) {
+  const userFoods = useApp((s) => s.foods);
+  const cats = new Set(list.map((e) => findFood(e.foodId, userFoods)?.category).filter(Boolean) as string[]);
+  const meals = new Set(list.map((e) => e.meal)).size;
+  return (
+    <LCard style={{ marginTop: space.md, gap: 10 }}>
+      <Text style={ls.bodyStrong}>גיוון תזונתי היום</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {GROUPS.map((g) => {
+          const on = g.cats.some((c) => cats.has(c));
+          return (
+            <View key={g.key} style={[styles.group, on && styles.groupOn]} accessible accessibilityLabel={`${g.label}: ${on ? 'נאכל היום' : 'עוד לא'}`}>
+              <Icon name={on ? 'check' : g.icon} size={16} color={on ? '#fff' : light.text2} />
+              <Text style={[ls.muted, on && { color: '#fff' }]}>{g.label}</Text>
+            </View>
+          );
+        })}
+      </View>
+      <Text style={ls.muted}>{meals} ארוחות תועדו היום · ארוחות סדירות נותנות אנרגיה לאימונים, ללימודים ולהתאוששות.</Text>
+    </LCard>
+  );
+}
+
 function Macro({ icon, title, value, target, color, onPress, partial }: { icon: IconName; title: string; value: number; target: number | null; color: string; onPress: () => void; partial: boolean }) {
   return (
     <Tap onPress={onPress} label={`${title}: ${Math.round(value)} גרם`} style={{ flex: 1 }}>
@@ -115,6 +149,8 @@ function Macro({ icon, title, value, target, color, onPress, partial }: { icon: 
 }
 
 const styles = StyleSheet.create({
+  group: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, minHeight: 36, borderRadius: 18, backgroundColor: light.cardSoft },
+  groupOn: { backgroundColor: light.protein },
   gaugeNum: { fontFamily: fonts.bold, fontSize: 56, lineHeight: 62, color: light.text, fontVariant: ['tabular-nums'] },
   gaugeLabel: { fontFamily: fonts.medium, fontSize: 17, color: light.text },
   gaugeOf: { fontFamily: fonts.regular, fontSize: 16, color: light.text2, marginTop: 30 },

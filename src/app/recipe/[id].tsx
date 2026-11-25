@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Screen, Card, Row, T, Section, Button, Stepper, Chip, toast, Empty, Badge } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/store/useApp';
@@ -30,7 +31,7 @@ export default function RecipeDetail() {
   return (
     <Screen title={r.name} footer={<Button title="אכלתי – הוספה ליומן" icon="plus" onPress={() => {
       addEntry({ date: dateKey(), meal, name: r.name, amount: servings, unitLabel: 'מנה', grams: null, nutrients: { kcal: n.partial.kcal ? null : Math.round(n.kcal * f), protein: n.partial.protein ? null : +(n.protein * f).toFixed(1), carbs: n.partial.carbs ? null : +(n.carbs * f).toFixed(1), fat: n.partial.fat ? null : +(n.fat * f).toFixed(1), fiber: n.partial.fiber ? null : +(n.fiber * f).toFixed(1) } });
-      haptic.success(); toast('נוסף ליומן'); router.back();
+      haptic.success(); toast('נוסף ליומן'); goBack();
     }} />}>
       <View style={{ height: 160, borderRadius: 28, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
         <Icon name="bowl" size={64} />

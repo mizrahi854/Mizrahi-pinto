@@ -29,6 +29,9 @@ export type Food = {
   imageUrl?: string;
   state?: 'raw' | 'cooked' | 'prepared';
   isPrivate?: boolean;
+  /** total package size in the food's basis unit (g/ml), when known */
+  packageSize?: number;
+  servingLabel?: string;
 };
 
 export type MealKey = string; // 'breakfast' | 'lunch' | 'dinner' | 'snack' | custom id
@@ -45,9 +48,13 @@ export type FoodEntry = {
   nutrients: Nutrients; // snapshot at time of logging
   time: string; // HH:MM
   photoUri?: string;
+  note?: string;
+  /** breakdown when several products were logged as one meal */
+  items?: { foodId?: string; name: string; amount: number; unitLabel: string; grams: number | null; nutrients: Nutrients }[];
   createdAt: number;
 };
 
+export type BasketItem = { key: string; foodId?: string; name: string; brand?: string; amount: number; unitLabel: string; unitGrams: number | null; grams: number | null; nutrients: Nutrients; imageUrl?: string };
 export type SavedMeal = { id: string; name: string; items: Omit<FoodEntry, 'id' | 'date' | 'meal' | 'time' | 'createdAt'>[] };
 
 export type Recipe = {

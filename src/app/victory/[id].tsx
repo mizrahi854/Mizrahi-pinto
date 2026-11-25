@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text, Share, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
@@ -39,7 +40,7 @@ export default function ChallengeDetail() {
 
   return (
     <HeroScreen back dotValue={s.left} label={c.finished ? 'האתגר הסתיים' : 'ימים לניצחון'} pill={c.name} pillIcon="trophy" progress={s.progress} heroHeight={270} tabBar={false}
-      menu={() => { del(c.id); router.back(); toast('האתגר נמחק'); }}>
+      menu={() => { del(c.id); goBack(); toast('האתגר נמחק'); }}>
       {celebrate && (
         <Animated.View entering={reduce ? undefined : ZoomIn.springify()} style={styles.celebrate}>
           <Icon name="trophy" size={34} /><T.H>כל המשימות של היום הושלמו!</T.H>

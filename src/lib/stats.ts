@@ -1,5 +1,5 @@
 import type { FoodEntry, WorkoutSession } from '../data/types';
-import { sumNutrients } from './nutrition';
+import { totalsOf } from './engine';
 import { addDays, dateKey, parseKey, DAY_SHORT } from './dates';
 
 export type Range = 'day' | 'week' | 'month' | 'custom';
@@ -24,7 +24,7 @@ export function metricSeries(metric: string, days: string[], entries: FoodEntry[
     switch (metric) {
       case 'kcal': case 'protein': case 'carbs': case 'fat': {
         const l = entries.filter((e) => e.date === d);
-        return { date: d, label, value: l.length ? sumNutrients(l.map((e) => e.nutrients))[metric as 'kcal'] : null };
+        return { date: d, label, value: l.length ? totalsOf(l)[metric as 'kcal'] : null };
       }
       case 'workouts': return { date: d, label, value: done.length };
       case 'sets': return { date: d, label, value: done.reduce((m, s) => m + sessionVolume(s).sets, 0) };

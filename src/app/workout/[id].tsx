@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
@@ -57,6 +58,19 @@ export default function WorkoutDetail() {
   return (
     <LightScreen
       title={heading}
+      heroHeight={176}
+      hero={
+        <View style={styles.hero}>
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={styles.badge}><Icon name="dumbbell" size={14} color={light.accent} /><Text style={styles.badgeText}>תוכנית אימון</Text></View>
+            <Text style={styles.planName}>{plan.name}</Text>
+            <Text style={styles.focus}>{plan.focus}</Text>
+          </View>
+          <View style={styles.figure}>
+            <BodyMap single primary={muscles} secondary={secondary} size={84} />
+          </View>
+        </View>
+      }
       right={<LIconButton icon="dots" label="אפשרויות" onPress={() => setMenu(true)} />}
       footer={<LPrimary title={plan.premium ? 'זמין ב-Premium' : active ? 'המשך אימון' : 'התחל אימון'} icon={plan.premium ? 'lock' : 'play'} onPress={go} />}
     >
@@ -76,22 +90,11 @@ export default function WorkoutDetail() {
         </View>
       </LCard>
 
-      {/* hero */}
-      <View style={styles.hero}>
-        <View style={{ flex: 1, gap: 6 }}>
-          <View style={styles.badge}><Icon name="dumbbell" size={14} color={light.accent} /><Text style={styles.badgeText}>תוכנית אימון</Text></View>
-          <Text style={styles.planName}>{plan.name}</Text>
-          <Text style={ls.muted}>{plan.focus}</Text>
-          <Row gap={8} style={{ marginTop: 8 }}>
-            <Stat icon="layers" value={String(totalSets)} label="סטים" />
-            <Stat icon="clock" value={`≈ ${estimateMinutes(plan)}`} label="דקות" />
-            <Stat icon="dumbbell" value={String(plan.exercises.length)} label="תרגילים" />
-          </Row>
-        </View>
-        <View style={styles.figure}>
-          <BodyMap single tone="light" primary={muscles} secondary={secondary} size={118} />
-        </View>
-      </View>
+      <Row gap={8} style={{ marginTop: space.md, marginBottom: space.lg }}>
+        <Stat icon="layers" value={String(totalSets)} label="סטים" />
+        <Stat icon="clock" value={`≈ ${estimateMinutes(plan)}`} label="דקות" />
+        <Stat icon="dumbbell" value={String(plan.exercises.length)} label="תרגילים" />
+      </Row>
 
       <Segmented value={tab} onChange={setTab} options={[{ key: 'ex', label: 'תרגילים' }, { key: 'sum', label: 'סיכום' }, { key: 'hist', label: 'היסטוריה' }]} />
 
@@ -163,7 +166,7 @@ export default function WorkoutDetail() {
         <ListItem icon="body" title="מאגר תרגילים" onPress={() => { setMenu(false); router.push('/exercises'); }} />
         <ListItem icon="calendar" title="לוח אימונים שבועי" onPress={() => { setMenu(false); router.push('/workouts'); }} />
         <ListItem icon="edit" title="יצירת אימון מותאם" onPress={() => { setMenu(false); router.push('/workout/builder'); }} />
-        {plan.custom && <ListItem icon="trash" danger title="מחיקת האימון" onPress={() => { deleteCustom(plan.id); setMenu(false); toast('האימון נמחק'); router.back(); }} />}
+        {plan.custom && <ListItem icon="trash" danger title="מחיקת האימון" onPress={() => { deleteCustom(plan.id); setMenu(false); toast('האימון נמחק'); goBack(); }} />}
       </Sheet>
     </LightScreen>
   );
@@ -193,11 +196,12 @@ function Stat({ icon, value, label }: { icon: IconName; value: string; label: st
 const styles = StyleSheet.create({
   big: { fontFamily: fonts.bold, fontSize: 22, color: light.text },
   vDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: light.border, marginHorizontal: 8 },
-  hero: { flexDirection: 'row', alignItems: 'center', marginVertical: space.lg, gap: 8 },
-  figure: { width: 130, alignItems: 'center' },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, backgroundColor: light.accentSoft },
-  badgeText: { fontFamily: fonts.medium, fontSize: 13, color: light.text },
-  planName: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 42, color: light.text },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  focus: { fontFamily: fonts.regular, fontSize: 14, color: 'rgba(255,255,255,0.75)' },
+  figure: { width: 100, alignItems: 'center', marginTop: -6 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(242,107,29,0.22)' },
+  badgeText: { fontFamily: fonts.medium, fontSize: 13, color: '#fff' },
+  planName: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 42, color: '#fff' },
   stat: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 10, borderRadius: 16, backgroundColor: light.cardSoft },
   statValue: { fontFamily: fonts.bold, fontSize: 18, color: light.text },
   exRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: radius.lg, backgroundColor: light.card },

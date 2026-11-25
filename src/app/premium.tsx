@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { goBack } from '@/lib/nav';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -69,7 +70,7 @@ export default function Premium() {
             </Animated.View>
             <View style={styles.topRow}>
               <Logo />
-              <IconButton icon="close" label="סגירה" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} size={44} />
+              <IconButton icon="close" label="סגירה" onPress={() => goBack()} size={44} />
             </View>
             <Animated.View entering={reduce ? undefined : FadeInDown.delay(120).duration(500)} style={styles.heroText}>
               <Icon name="crown" size={42} color={colors.accent} />

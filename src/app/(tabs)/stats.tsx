@@ -11,7 +11,7 @@ import { useApp } from '@/store/useApp';
 import { isAdult } from '@/lib/nutrition';
 import { daysFor, metricSeries, aggregate, bucket, RANGE_DAYS, Range } from '@/lib/stats';
 import { dateKey, addDays } from '@/lib/dates';
-import { colors, fonts, radius, space, type } from '@/theme/tokens';
+import { colors, fonts, radius, space } from '@/theme/tokens';
 
 /** 47 Statistics – approved structure: dot headline, glass tiles, weekly calories bars, weight trend */
 export default function Stats() {

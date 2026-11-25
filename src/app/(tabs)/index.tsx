@@ -10,7 +10,7 @@ import { useDay } from '@/store/selectors';
 import { Logo, HeroBackdrop, SideRulers, WaveHeader, useScreenWidth } from '@/components/Brand';
 import { DotNumber } from '@/components/DotMatrix';
 import { NumRow } from '@/components/MacroCard';
-import { IconButton, ProgressBar, Ring, Row, Sheet, T, Tap, ListItem, Badge } from '@/components/ui';
+import { IconButton, ProgressBar, Ring, Row, Sheet, Tap, ListItem, Badge } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
 import { colors, fonts, radius, space, type } from '@/theme/tokens';
 import { dateKey, greeting, DAY_LONG } from '@/lib/dates';
