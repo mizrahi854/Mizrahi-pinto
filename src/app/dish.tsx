@@ -109,6 +109,6 @@ export default function DishEdit() {
 const styles = StyleSheet.create({
   menu: { height: 260, borderRadius: radius.lg, backgroundColor: light.card },
   photo: { height: 140, borderRadius: radius.lg, width: '100%' },
-  photoPh: { backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(242,107,29,0.35)', alignItems: 'center', justifyContent: 'center', gap: 6, height: 88 },
+  photoPh: { backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(245,121,37,0.35)', alignItems: 'center', justifyContent: 'center', gap: 6, height: 88 },
   phText: { fontFamily: fonts.regular, fontSize: 14, color: light.text2 },
 });

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, Platform } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Screen, Card, Row, T, Button, Chip, Sheet, Field, IconButton, Tap, Badge, toast, Section } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
 import { TimeWheel } from '@/components/WheelPicker';
+import { DotMatrix } from '@/components/DotMatrix';
+import { DarkSwitch } from '@/components/glass';
 import { useApp } from '@/store/useApp';
 import type { Reminder, ReminderType } from '@/data/types';
 import { getPermission, requestPermission, scheduleReminder, cancelReminder, PermState, notificationsSupported } from '@/lib/notifications';
@@ -39,6 +41,7 @@ export default function Alarm() {
   const [edit, setEdit] = useState<Reminder | null>(() => (p.new === '1' ? { id: uid(), type: 'workout', title: 'תזכורת לאימון', time: '05:00', days: [0, 2, 4], enabled: true, sound: 'default' } : null));
   useEffect(() => { getPermission().then(setPerm); }, []);
   const web = Platform.OS === 'web';
+  const morning = [...reminders].filter((r) => r.type === 'alarm' || r.type === 'daily' || r.time < '09:00').sort((x, y) => x.time.localeCompare(y.time))[0];
   const opts = { muted: settings.muted, muteShabbat: shabbat.muteDuringShabbat };
 
   const save = async (r: Reminder) => {
@@ -60,6 +63,11 @@ export default function Alarm() {
 
   return (
     <Screen title="תזכורות ושעון מעורר" right={<IconButton icon="plus" label="תזכורת חדשה" active size={44} onPress={() => setEdit({ id: uid(), type: 'workout', title: 'תזכורת לאימון', time: '05:00', days: [0, 2, 4], enabled: true, sound: 'default' })} />}>
+      <View style={{ alignItems: 'center', paddingVertical: space.lg, gap: 8 }} accessible accessibilityLabel={morning ? `תזכורת הבוקר ב-${morning.time}` : 'אין תזכורת בוקר'}>
+        <DotMatrix text={morning?.time ?? '05:00'} dot={7} gap={3} color={morning?.enabled ? colors.text : colors.text3} />
+        <Text style={{ fontFamily: fonts.medium, fontSize: 15, color: colors.text2 }}>{morning ? `${morning.title} · ${morning.days.length === 7 ? 'כל יום' : morning.days.map((d) => DAY_SHORT[d]).join(' ')}` : 'תזכורת בוקר – למשל 05:00 לפני אימון'}</Text>
+        {!morning && <Button title="הגדרת תזכורת בוקר 05:00" variant="soft" onPress={() => setEdit({ id: uid(), type: 'alarm', title: 'השכמה', time: '05:00', days: [0, 1, 2, 3, 4], enabled: true, sound: 'default' })} />}
+      </View>
       {web && (
         <Card style={{ gap: 6, marginBottom: space.md, borderColor: colors.borderStrong }}>
           <Row><Icon name="flag" /><T.H>מגבלות בגרסת האתר באייפון</T.H></Row>
@@ -68,8 +76,8 @@ export default function Alarm() {
         </Card>
       )}
       <Card style={{ gap: 4, marginBottom: space.md }}>
-        <Row style={{ justifyContent: 'space-between' }}><T.Body style={{ flex: 1 }}>השתקת כל ההתראות</T.Body><Switch value={settings.muted} onValueChange={(v) => { updateSettings({ muted: v }); toast(v ? 'כל ההתראות הושתקו' : 'ההתראות הופעלו מחדש'); reminders.forEach((r) => scheduleReminder(r, { ...opts, muted: v }).then((ids) => upsert({ ...r, notificationIds: ids })).catch(() => {})); }} trackColor={{ true: colors.accent, false: colors.track }} thumbColor="#fff" accessibilityLabel="השתקת כל ההתראות" /></Row>
-        <Row style={{ justifyContent: 'space-between' }}><T.Body style={{ flex: 1 }}>ללא התראות בשבת</T.Body><Switch value={shabbat.muteDuringShabbat} onValueChange={(v) => updateShabbat({ muteDuringShabbat: v })} trackColor={{ true: colors.accent, false: colors.track }} thumbColor="#fff" accessibilityLabel="ללא התראות בשבת" /></Row>
+        <Row style={{ justifyContent: 'space-between' }}><T.Body style={{ flex: 1 }}>השתקת כל ההתראות</T.Body><DarkSwitch value={settings.muted} onChange={(v) => { updateSettings({ muted: v }); toast(v ? 'כל ההתראות הושתקו' : 'ההתראות הופעלו מחדש'); reminders.forEach((r) => scheduleReminder(r, { ...opts, muted: v }).then((ids) => upsert({ ...r, notificationIds: ids })).catch(() => {})); }} label="השתקת כל ההתראות" /></Row>
+        <Row style={{ justifyContent: 'space-between' }}><T.Body style={{ flex: 1 }}>ללא התראות בשבת</T.Body><DarkSwitch value={shabbat.muteDuringShabbat} onChange={(v) => updateShabbat({ muteDuringShabbat: v })} label="ללא התראות בשבת" /></Row>
         <T.Caption>שבת: משישי 16:00 ועד מוצאי שבת (בקירוב).</T.Caption>
       </Card>
       <Card style={{ gap: 6, marginBottom: space.md }}>
@@ -95,14 +103,14 @@ export default function Alarm() {
                 </View>
               </Row>
             </Tap>
-            <Switch value={r.enabled} onValueChange={(v) => save({ ...r, enabled: v })} trackColor={{ true: colors.accent, false: colors.track }} thumbColor="#fff" {...({ activeThumbColor: '#fff' } as any)} accessibilityLabel={`הפעלת ${r.title}`} />
+            <DarkSwitch value={r.enabled} onChange={(v) => save({ ...r, enabled: v })} label={`הפעלת ${r.title}`} />
           </View>
         );
       })}
 
       <Section title="שעות שקטות">
         <Card style={{ gap: 10 }}>
-          <Row style={{ justifyContent: 'space-between' }}><T.Body>הפעלה</T.Body><Switch value={settings.quietEnabled} onValueChange={(v) => updateSettings({ quietEnabled: v })} trackColor={{ true: colors.accent, false: colors.track }} thumbColor="#fff" {...({ activeThumbColor: '#fff' } as any)} accessibilityLabel="שעות שקטות" /></Row>
+          <Row style={{ justifyContent: 'space-between' }}><T.Body>הפעלה</T.Body><DarkSwitch value={settings.quietEnabled} onChange={(v) => updateSettings({ quietEnabled: v })} label="שעות שקטות" /></Row>
           <Row style={{ justifyContent: 'space-between' }}><T.Muted>מ-</T.Muted><Row>{['21:00', '22:00', '23:00'].map((t) => <Chip key={t} label={t} active={settings.quietStart === t} onPress={() => updateSettings({ quietStart: t })} />)}</Row></Row>
           <Row style={{ justifyContent: 'space-between' }}><T.Muted>עד</T.Muted><Row>{['06:00', '07:00', '08:00'].map((t) => <Chip key={t} label={t} active={settings.quietEnd === t} onPress={() => updateSettings({ quietEnd: t })} />)}</Row></Row>
           <T.Caption>תזכורות (מלבד השכמה) לא מומלצות בשעות אלה. אזור הזמן נקבע לפי המכשיר.</T.Caption>
@@ -137,3 +145,4 @@ export default function Alarm() {
     </Screen>
   );
 }
+

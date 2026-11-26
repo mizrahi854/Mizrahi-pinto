@@ -1,3 +1,4 @@
+import { DotNumber } from '@/components/DotMatrix';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -30,6 +31,7 @@ export default function Shabbat() {
   const [openMeal, setOpenMeal] = useState<string | null>(null);
   const [item, setItem] = useState('');
   const fri = parseKey(days[5]!);
+  const untilFri = Math.max(0, Math.round((parseKey(days[5]!).getTime() - parseKey(dateKey()).getTime()) / 86400000));
   const sat = parseKey(days[6]!);
   const setMeal = (key: string, patch: Partial<ShabbatPlan['meals'][number]>) => update({ meals: plan.meals.map((m) => (m.key === key ? { ...m, ...patch } : m)) });
   const allDishes = plan.meals.filter((m) => m.enabled).flatMap((m) => m.dishes);
@@ -37,6 +39,18 @@ export default function Shabbat() {
 
   return (
     <LightScreen title="שישי ושבת" subtitle={`${fri.getDate()}/${fri.getMonth() + 1} – ${sat.getDate()}/${sat.getMonth() + 1}`}
+      heroHeight={150}
+      hero={
+        <View style={styles.hero} accessible accessibilityLabel={untilFri > 0 ? `עוד ${untilFri} ימים לשישי` : 'סוף השבוע כאן'}>
+          <View style={styles.candles} accessibilityElementsHidden>
+            {[0, 1].map((k) => (<View key={k} style={styles.candle}><View style={styles.flame} /><View style={styles.wax} /></View>))}
+          </View>
+          <View style={{ alignItems: 'flex-start', gap: 4 }}>
+            {untilFri > 0 ? <DotNumber value={untilFri} dot={6} gap={2.6} /> : <Text style={styles.heroBig}>שבת שלום</Text>}
+            <Text style={styles.heroSub}>{untilFri > 0 ? 'ימים לשישי' : 'סוף השבוע כאן'} · {plan.meals.filter((m) => m.enabled).length} ארוחות בתוכנית</Text>
+          </View>
+        </View>
+      }
       footer={<LPrimary title={applied ? 'עדכון התוכנית בשבוע הזה' : 'הוספה לתוכנית השבוע'} icon="calendar" onPress={() => {
         const n = apply(weekStart);
         haptic.success();
@@ -135,9 +149,16 @@ function WorkoutPick({ label, value, onChange, day }: { label: string; value: Wo
 }
 
 const styles = StyleSheet.create({
+  hero: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28 },
+  candles: { flexDirection: 'row', gap: 14, alignItems: 'flex-end' },
+  candle: { alignItems: 'center' },
+  flame: { width: 14, height: 22, borderRadius: 10, backgroundColor: '#FFB36B', ...({ boxShadow: '0 0 18px 6px rgba(245,121,37,0.55)' } as any) },
+  wax: { width: 16, height: 62, borderRadius: 4, marginTop: 6, backgroundColor: '#ECE8E2' },
+  heroBig: { fontFamily: fonts.bold, fontSize: 30, color: '#fff' },
+  heroSub: { fontFamily: fonts.medium, fontSize: 14, color: 'rgba(245,245,245,0.8)' },
   mealHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   swHit: { minWidth: 56, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  sw: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#D9D3CF', padding: 3, flexDirection: 'row' },
+  sw: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#D0D1D4', padding: 3, flexDirection: 'row' },
   swOn: { backgroundColor: light.accentText, justifyContent: 'flex-end' },
   knob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff' },
   dish: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: light.cardSoft, borderRadius: radius.md, paddingStart: 12, minHeight: 48 },

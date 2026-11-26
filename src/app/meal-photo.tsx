@@ -93,7 +93,7 @@ function Big({ icon, label, onPress, primary }: { icon: IconName; label: string;
 }
 
 const styles = StyleSheet.create({
-  frame: { height: 260, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(242,107,29,0.35)', alignItems: 'center', justifyContent: 'center' },
+  frame: { height: 260, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(245,121,37,0.35)', alignItems: 'center', justifyContent: 'center' },
   big: { minHeight: 58, borderRadius: radius.lg, borderWidth: 1.5, borderColor: 'rgba(194,65,12,0.35)', backgroundColor: light.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 8 },
   bigText: { fontFamily: fonts.bold, fontSize: 16, color: light.accentText, textAlign: 'center' },
 });

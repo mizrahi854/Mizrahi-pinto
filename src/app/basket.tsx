@@ -145,7 +145,7 @@ export default function Basket() {
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: space.md }}>
             <Tap onPress={saveTemplate} label="שמירה כארוחה קבועה" style={{ flex: 1 }}><View style={styles.ghost}><Icon name="star" size={18} color={light.accent} /><Text style={styles.ghostText}>שמירה כארוחה קבועה</Text></View></Tap>
-            <Tap onPress={() => { clear(); toast('הסל נוקה'); }} label="ניקוי הסל" style={{ flex: 1 }}><View style={[styles.ghost, { borderColor: '#DCD5D0' }]}><Text style={[styles.ghostText, { color: light.text2 }]}>ניקוי הסל</Text></View></Tap>
+            <Tap onPress={() => { clear(); toast('הסל נוקה'); }} label="ניקוי הסל" style={{ flex: 1 }}><View style={[styles.ghost, { borderColor: '#D4D5D8' }]}><Text style={[styles.ghostText, { color: light.text2 }]}>ניקוי הסל</Text></View></Tap>
           </View>
         </>
       )}
@@ -178,8 +178,8 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.medium, fontSize: 14.5, color: light.text },
   input: { minHeight: 50, borderRadius: radius.md, backgroundColor: light.cardSoft, paddingHorizontal: 14, fontFamily: fonts.regular, fontSize: 16, color: light.text },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: space.md, minHeight: 44 },
-  box: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: '#CFC8C3', alignItems: 'center', justifyContent: 'center' },
+  box: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: '#C8C9CC', alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: light.accent, borderColor: light.accent },
-  ghost: { minHeight: 50, borderRadius: radius.pill, borderWidth: 1.5, borderColor: 'rgba(242,107,29,0.4)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
+  ghost: { minHeight: 50, borderRadius: radius.pill, borderWidth: 1.5, borderColor: 'rgba(245,121,37,0.4)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
   ghostText: { fontFamily: fonts.semibold, fontSize: 14.5, color: light.accentText },
 });

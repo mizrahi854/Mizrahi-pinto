@@ -35,9 +35,23 @@ export const FOOD_PHOTO: Record<string, ImageSourcePropType> = {
   f022: require('../../assets/photos/protein_shake.jpg'),
 };
 
+/** Default meal images (from the approved MIZRAHI PINTO mockups) – shown until the user adds a photo. */
 export const MEAL_PHOTO: Record<string, ImageSourcePropType> = {
-  breakfast: require('../../assets/photos/yogurt_berries.jpg'),
-  lunch: require('../../assets/photos/rice.jpg'),
-  dinner: require('../../assets/photos/salmon.jpg'),
-  snack: require('../../assets/photos/avocado.jpg'),
+  breakfast: require('../../assets/brand/meal-breakfast.png'),
+  lunch: require('../../assets/brand/meal-lunch.png'),
+  dinner: require('../../assets/brand/meal-dinner.png'),
+  snack: require('../../assets/brand/meal-snack.png'),
+};
+
+/** 3D anatomy art (approved mockups): torso for cards, chest/arm close-up for the workout hero. */
+export const ANATOMY = { torso: require('../../assets/brand/torso.png'), detail: require('../../assets/brand/anatomy.png') };
+
+/** Muscle-group tiles for the questionnaire and the workout screens. */
+export const MUSCLE_TILE: Record<string, ImageSourcePropType> = {
+  chest: require('../../assets/brand/muscle-chest.png'),
+  back: require('../../assets/brand/muscle-back.png'),
+  shoulders: require('../../assets/brand/muscle-shoulders.png'),
+  arms: require('../../assets/brand/muscle-arms.png'),
+  legs: require('../../assets/brand/muscle-legs.png'),
+  abs: require('../../assets/brand/muscle-abs.png'),
 };

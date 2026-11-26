@@ -81,7 +81,7 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
         return (
           <Pressable key={o.key} onPress={() => { haptic.select(); onChange(o.key); }} style={{ flex: 1 }} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={o.label}>
             <View style={[s.segItem, on && s.segOn]}>
-              {on && <LinearGradient colors={['#F7883B', light.accent, light.accentDeep]} style={[StyleSheet.absoluteFill, { borderRadius: radius.pill }]} />}
+              {on && <LinearGradient colors={['#D9601A', '#C2500F']} style={[StyleSheet.absoluteFill, { borderRadius: radius.pill }]} />}
               <Text style={[s.segText, on && { color: '#fff', fontFamily: fonts.semibold }]}>{o.label}</Text>
             </View>
           </Pressable>
@@ -95,7 +95,7 @@ export function LPrimary({ title, icon, onPress }: { title: string; icon?: IconN
   return (
     <Tap onPress={onPress} label={title}>
       <View style={s.primary}>
-        <LinearGradient colors={['#F7883B', light.accent, light.accentDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['#D9601A', '#C2500F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         {icon && <Icon name={icon} size={22} color="#fff" strokeWidth={2.2} />}
         <Text style={s.primaryText}>{title}</Text>
       </View>
@@ -147,14 +147,14 @@ export const ls = StyleSheet.create({
   chipText: { fontFamily: fonts.medium, fontSize: 13, color: light.text },
 });
 
-const shadow = Platform.OS === 'web' ? ({ boxShadow: '0 6px 20px rgba(30,20,10,0.06)' } as any) : { shadowColor: '#2a1a0a', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 };
+const shadow = Platform.OS === 'web' ? ({ boxShadow: '0 6px 20px rgba(19,20,22,0.06)' } as any) : { shadowColor: '#000000', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 2 };
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#070403', alignItems: 'center' },
-  inner: { flex: 1, maxWidth: MAX_W, backgroundColor: '#0B0705', overflow: 'hidden' },
+  root: { flex: 1, backgroundColor: '#0E0F10', alignItems: 'center' },
+  inner: { flex: 1, maxWidth: MAX_W, backgroundColor: '#131416', overflow: 'hidden' },
   body: { backgroundColor: light.bg, borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: -28, paddingHorizontal: space.md, paddingTop: space.lg, minHeight: 600 },
   subtitle: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
-  iconBtnDark: { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.2)' },
+  iconBtnDark: { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, paddingBottom: 10 },
   side: { width: 52 },
   title: { textAlign: 'center', fontFamily: fonts.bold, fontSize: 24, color: '#fff' },

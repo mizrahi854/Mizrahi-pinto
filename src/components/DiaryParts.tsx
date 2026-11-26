@@ -31,8 +31,8 @@ export function CalendarSheet({ visible, value, logged, onClose, onPick }: { vis
         {DAY_SHORT.map((d) => <Text key={d} style={styles.calHead}>{d}</Text>)}
         {days.map((d, i) => d ? (
           <Pressable key={d} onPress={() => onPick(d)} accessibilityRole="button" accessibilityLabel={`${prettyDate(d)}${logged.has(d) ? ', יש רישומים' : ''}`} style={[styles.calDay, d === value && styles.calDayOn]}>
-            <Text style={[styles.calNum, d === value && { color: '#1A0C04' }]}>{parseKey(d).getDate()}</Text>
-            {logged.has(d) && <View style={[styles.dot, d === value && { backgroundColor: '#1A0C04' }]} />}
+            <Text style={[styles.calNum, d === value && { color: '#131416' }]}>{parseKey(d).getDate()}</Text>
+            {logged.has(d) && <View style={[styles.dot, d === value && { backgroundColor: '#131416' }]} />}
           </Pressable>
         ) : <View key={`e${i}`} style={styles.calDay} />)}
       </View>
@@ -90,7 +90,7 @@ export function EditEntrySheet({ entry, onClose, adult }: { entry: FoodEntry | n
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {meals.map((m) => (
           <Pressable key={m.key} onPress={() => setMeal(m.key)} accessibilityRole="radio" accessibilityState={{ selected: meal === m.key }} accessibilityLabel={m.label} style={[styles.darkChip, meal === m.key && styles.darkChipOn]}>
-            <Text style={[styles.darkChipText, meal === m.key && { color: '#1A0C04' }]}>{m.label}</Text>
+            <Text style={[styles.darkChipText, meal === m.key && { color: '#131416' }]}>{m.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   editAmount: { fontFamily: fonts.bold, fontSize: 34, color: '#fff', textAlign: 'center', minWidth: 100, paddingVertical: 0 },
   editPreview: { textAlign: 'center', color: 'rgba(255,255,255,0.8)', fontFamily: fonts.medium, marginTop: 10 },
   editLabel: { color: 'rgba(255,255,255,0.7)', fontFamily: fonts.medium, marginTop: space.md, marginBottom: 6 },
-  darkChip: { minHeight: 42, paddingHorizontal: 14, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.2)', justifyContent: 'center' },
+  darkChip: { minHeight: 42, paddingHorizontal: 14, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', justifyContent: 'center' },
   darkChipOn: { backgroundColor: '#F2A05C', borderColor: '#F2A05C' },
   darkChipText: { fontFamily: fonts.medium, fontSize: 14, color: '#fff' },
   timeInput: { minHeight: 46, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', fontFamily: fonts.semibold, fontSize: 17, textAlign: 'center', width: 110 },

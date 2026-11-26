@@ -156,7 +156,7 @@ export const f = StyleSheet.create({
   time: { width: 92, textAlign: 'center', fontFamily: fonts.semibold },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: light.card },
   toggleTitle: { fontFamily: fonts.semibold, fontSize: 15.5, color: light.text },
-  switch: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#D9D3CF', padding: 3, flexDirection: 'row' },
+  switch: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#D0D1D4', padding: 3, flexDirection: 'row' },
   switchOn: { backgroundColor: light.accentText, justifyContent: 'flex-end' },
   knob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff' },
   knobOn: {},

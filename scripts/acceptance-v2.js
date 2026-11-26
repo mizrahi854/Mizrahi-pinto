@@ -43,7 +43,7 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { ok(name, fals
   await step('1. הוספת ארוחה', async () => {
     await p.getByLabel('הוסף ארוחה', { exact: true }).click(); await wait(900);
     await p.getByRole('radio', { name: 'ארוחת צהריים' }).click(); await wait(300);
-    await p.getByLabel('חיפוש מוצר', { exact: true }).click(); await wait(1800);
+    await p.getByLabel(/^חפש מזון/).last().click(); await wait(1800);
     await p.getByLabel('חיפוש מוצר').fill('קוטג'); await wait(800);
     await p.getByText('קוטג׳ 5%', { exact: true }).first().click(); await wait(1500);
     await p.getByRole('radio', { name: 'ג׳' }).first().click(); await wait(300);
@@ -112,7 +112,7 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { ok(name, fals
     const sum = s.entries.filter((x) => x.date === today).reduce((m, x) => m + (x.nutrients.kcal || 0), 0);
     const diaryLabel = await p.locator('[aria-label^="סיכום היום:"]').first().getAttribute('aria-label');
     await go('/', 2800);
-    const homeLabel = await p.locator('[aria-label*="קלוריות נותרו להיום"]').first().getAttribute('aria-label');
+    const homeLabel = await p.locator('[aria-label*="קלוריות נשארו"]').first().getAttribute('aria-label');
     ok('7. סיכום יומי זהה ביומן ובבית', diaryLabel.includes(`${sum} קלוריות מתוך 2300`) && homeLabel.startsWith(String(2300 - sum)), `נאכלו ${sum}, נותרו ${2300 - sum}`);
   });
 
@@ -247,19 +247,19 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { ok(name, fals
   });
 
   // 18. works offline (in-app actions without network)
-  await step('18. עבודה ללא אינטרנט', async () => {
+  await step('18. עבודה ללא אינטרנט', async () => { try {
     await go('/(tabs)/diary', 2000);
     await ctx.setOffline(true);
     await p.getByLabel('הוסף קלוריות', { exact: true }).click(); await wait(900);
     await p.getByLabel('מספר קלוריות').fill('150');
     await p.getByLabel('שם המאכל').fill('תפוח אופליין');
     await p.getByLabel('שמירה ליומן').click(); await wait(800);
-    await p.getByRole('tab', { name: 'השבוע', exact: true }).click(); await wait(1200);
-    const planOk = (await p.evaluate(() => document.body.innerText)).includes('התוכנית השבועית');
+    await p.getByRole('tab', { name: 'תכנון', exact: true }).click(); await wait(1200);
+    const planOk = (await p.evaluate(() => document.body.innerText)).includes('אימונים ותכנון');
     s = await st();
     await ctx.setOffline(false);
     ok('18. עבודה ללא אינטרנט', s.entries.some((x) => x.name === 'תפוח אופליין') && planOk, 'הוספה ומעבר מסכים במצב טיסה (טעינה מחדש אופליין נבדקת באתר המפורסם)');
-  });
+  } finally { await ctx.setOffline(false); } });
 
   // 22. premium placeholder: no purchase, free path
   await step('22. כפתור פרימיום', async () => {
@@ -278,16 +278,16 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { ok(name, fals
   await step('23. ניווט', async () => {
     await go('/', 2500);
     const visited = [];
-    for (const [lbl, path] of [['יומן', '/diary'], ['השבוע', '/plan'], ['פרופיל', '/profile'], ['בית', '/']]) {
+    for (const [lbl, path] of [['יומן תזונה', '/diary'], ['תכנון', '/plan'], ['פרופיל', '/profile'], ['בית', '/']]) {
       await p.getByRole('tab', { name: lbl, exact: true }).click(); await wait(900);
       visited.push(new URL(p.url()).pathname === path || (path === '/' && /\/$/.test(p.url())));
     }
-    const actions = [['הוסף ארוחה', '/add-meal'], ['הוסף קלוריות', '/add-calories'], ['סרוק ברקוד', '/barcode'], ['צלם ארוחה', '/meal-photo'], ['תכנן אימון', '/workout'], ['תכנן מסעדה', '/event'], ['הוסף תזכורת', '/alarm']];
+    const actions = [['הוסף קלוריות', '/add-calories'], [/^סרוק ברקוד/, '/barcode'], [/^צלם ארוחה/, '/meal-photo'], [/^חפש מזון/, '/foods'], [/^תאר את המזון/, '/describe'], [/^ארוחות שמורות/, '/saved-meals'], ['תכנן אימון', '/workout'], ['תכנן מסעדה', '/event'], ['הוסף תזכורת', '/alarm']];
     const acts = [];
     for (const [lbl, path] of actions) {
       await go('/', 1800);
       await p.getByLabel('פעולות מהירות').first().click(); await wait(700);
-      await p.getByLabel(lbl, { exact: true }).last().click(); await wait(1200);
+      await (typeof lbl === 'string' ? p.getByLabel(lbl, { exact: true }) : p.getByLabel(lbl)).last().click(); await wait(1200);
       acts.push(new URL(p.url()).pathname === path ? 1 : (console.log('   nav miss', lbl, p.url()), 0));
     }
     // profile hub links
@@ -298,7 +298,7 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { ok(name, fals
       await p.getByText(lbl, { exact: true }).last().click(); await wait(1100);
       hub.push(new URL(p.url()).pathname === path ? 1 : (console.log('   hub miss', lbl, p.url()), 0));
     }
-    ok('23. תקינות מסלולי הניווט', visited.every(Boolean) && acts.every(Boolean) && hub.every(Boolean), `4 לשוניות · ${acts.reduce((a, c) => a + c, 0)}/7 פעולות מהירות · ${hub.reduce((a, c) => a + c, 0)}/7 קישורי פרופיל`);
+    ok('23. תקינות מסלולי הניווט', visited.every(Boolean) && acts.every(Boolean) && hub.every(Boolean), `4 לשוניות · ${acts.reduce((a, c) => a + c, 0)}/${actions.length} פעולות מהירות · ${hub.reduce((a, c) => a + c, 0)}/7 קישורי פרופיל`);
   });
 
   // 21. accessibility: every control named; touch targets

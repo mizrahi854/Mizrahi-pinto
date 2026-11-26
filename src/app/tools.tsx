@@ -1,3 +1,4 @@
+import { DotNumber } from '@/components/DotMatrix';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
@@ -21,8 +22,14 @@ export default function Tools() {
   const profile = useApp((s) => s.profile);
   const adult = isAdult(profile.age);
   const [tab, setTab] = useState<Tab>(adult ? 'body' : 'food');
+  const bmi = bmiAdult(profile);
   return (
-    <LightScreen title="מחשבונים וכלים">
+    <LightScreen title="מחשבונים וכלים" heroHeight={112} hero={
+      <View style={{ alignItems: 'center', gap: 6 }} accessible accessibilityLabel={adult && bmi ? `BMI נוכחי ${bmi.value}` : 'כלים מותאמי גיל'}>
+        {adult && bmi ? <DotNumber value={Math.round(bmi.value)} dot={6} gap={2.6} /> : <Icon name="calc" size={44} color="#fff" />}
+        <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: 'rgba(245,245,245,0.8)' }}>{adult && bmi ? `BMI לפי הפרופיל · ${bmi.category}` : adult ? 'הזן גובה ומשקל לחישוב' : 'כלים מותאמי גיל'}</Text>
+      </View>
+    }>
       <Segmented value={tab} onChange={setTab} options={[...(adult ? [{ key: 'body' as Tab, label: 'גוף ואנרגיה' }] : []), { key: 'food', label: 'ערכים לפי כמות' }, { key: 'portions', label: 'גרמים ומנות' }]} />
       {!adult && (
         <View style={{ marginTop: space.md }}>

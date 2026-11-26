@@ -152,7 +152,7 @@ function MoveSheet({ visible, onClose, date, meal, entries, onApply }: { visible
       <View style={styles.chips}>
         {meals.map((x) => (
           <Pressable key={x.key} onPress={() => setM(x.key)} accessibilityRole="radio" accessibilityState={{ selected: m === x.key }} accessibilityLabel={x.label} style={[styles.dChip, m === x.key && styles.dChipOn]}>
-            <Text style={[styles.dChipText, m === x.key && { color: '#1A0C04' }]}>{x.label}</Text>
+            <Text style={[styles.dChipText, m === x.key && { color: '#131416' }]}>{x.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -162,7 +162,7 @@ function MoveSheet({ visible, onClose, date, meal, entries, onApply }: { visible
           const v = addDays(dateKey(), k);
           return (
             <Pressable key={v} onPress={() => setD(v)} accessibilityRole="radio" accessibilityState={{ selected: d === v }} accessibilityLabel={prettyDate(v)} style={[styles.dChip, d === v && styles.dChipOn]}>
-              <Text style={[styles.dChipText, d === v && { color: '#1A0C04' }]}>{prettyDate(v)}</Text>
+              <Text style={[styles.dChipText, d === v && { color: '#131416' }]}>{prettyDate(v)}</Text>
             </Pressable>
           );
         })}
@@ -195,7 +195,7 @@ function SumCell({ v, l }: { v: string; l: string }) {
 
 const styles = StyleSheet.create({
   photo: { height: 170, borderRadius: radius.lg, width: '100%' },
-  photoEmpty: { backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(242,107,29,0.35)', alignItems: 'center', justifyContent: 'center', gap: 6, height: 96 },
+  photoEmpty: { backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(245,121,37,0.35)', alignItems: 'center', justifyContent: 'center', gap: 6, height: 96 },
   sum: { flexDirection: 'row', marginTop: space.md },
   sumV: { fontFamily: fonts.bold, fontSize: 20, color: light.text, fontVariant: ['tabular-nums'] },
   item: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: light.card, borderRadius: radius.md, paddingStart: 14, paddingEnd: 4, paddingVertical: 6 },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   actionText: { fontFamily: fonts.semibold, fontSize: 14, color: light.text, textAlign: 'center' },
   sheetLabel: { color: 'rgba(255,255,255,0.75)', fontFamily: fonts.medium, marginTop: space.md, marginBottom: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  dChip: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.2)', justifyContent: 'center' },
+  dChip: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', justifyContent: 'center' },
   dChipOn: { backgroundColor: '#F2A05C', borderColor: '#F2A05C' },
   dChipText: { fontFamily: fonts.medium, fontSize: 14, color: '#fff' },
 });

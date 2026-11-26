@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', marginTop: 22, gap: 8, paddingHorizontal: space.lg },
   title: { fontFamily: fonts.semibold, fontSize: 34, lineHeight: 42, color: colors.text, textAlign: 'center' },
   label: { fontFamily: fonts.medium, fontSize: 18, color: colors.text, textAlign: 'center' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.22)' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   pillText: { ...type.label, color: colors.text, fontFamily: fonts.medium },
   panel: { backgroundColor: colors.surface, paddingHorizontal: space.md, marginTop: -2 },
 });

@@ -8,7 +8,7 @@ export type IconName =
   | 'chevron' | 'chevronBack' | 'bell' | 'clock' | 'search' | 'barcode' | 'camera' | 'crown' | 'calendar' | 'play'
   | 'pause' | 'check' | 'close' | 'trash' | 'star' | 'starFill' | 'settings' | 'help' | 'trophy' | 'list' | 'cart'
   | 'edit' | 'copy' | 'dots' | 'bowl' | 'bolt' | 'layers' | 'repeat' | 'weight' | 'timer' | 'sparkle' | 'image'
-  | 'alarm' | 'moon' | 'minus' | 'skip' | 'swap' | 'lock' | 'logout' | 'download' | 'flag' | 'calc' | 'volume' | 'mute' | 'body';
+  | 'alarm' | 'moon' | 'minus' | 'skip' | 'swap' | 'lock' | 'logout' | 'download' | 'flag' | 'calc' | 'volume' | 'mute' | 'body' | 'book' | 'sun' | 'cloche' | 'trend';
 
 type Props = { name: IconName; size?: number; color?: string; strokeWidth?: number };
 
@@ -16,6 +16,14 @@ export function Icon({ name, size = 22, color = colors.accent, strokeWidth = 1.7
   const p = { stroke: color, strokeWidth, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   const content = (() => {
     switch (name) {
+      case 'book':
+        return <Path {...p} d="M12 6.5C10.4 5.2 8 4.5 4.5 4.5v13c3.5 0 5.9.7 7.5 2 1.6-1.3 4-2 7.5-2v-13c-3.5 0-5.9.7-7.5 2Zm0 0v13" />;
+      case 'sun':
+        return (<><Circle {...p} cx="12" cy="12" r="4" /><Path {...p} d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" /></>);
+      case 'cloche':
+        return <Path {...p} d="M3.5 17.5h17M5 17.5a7 7 0 0 1 14 0M12 8.5v-2M10.5 6.5h3M4 20h16" />;
+      case 'trend':
+        return <Path {...p} d="M3.5 17l5-5 3.5 3 8-8M15 7h5v5" />;
       case 'home':
         return <Path {...p} d="M4 11.5 12 4.5l8 7V19a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19v-7.5ZM9.5 16h5" />;
       case 'chart':

@@ -1,52 +1,56 @@
 /**
  * MIZRAHI PINTO design tokens.
- * Palette sampled from the approved dark home screen (docs/design_reference/approved-home-orange.png):
- * near-black warm base, deep ember orange used as *light* (glows, edges), a warmer orange for accents.
- * Never use purple / green as brand colors. Never fill large areas with saturated orange.
+ * Final palette: orange #F57925, black #131416, graphite #303236, silver #B9BABD, white #F5F5F5.
+ * Neutral graphite base (no brown), orange used as light and for primary actions only.
+ * No neon halos, no glowing orange frames around every card.
  */
 export const colors = {
-  bg: '#0B0705',
-  bgDeep: '#070403',
-  surface: '#150D08',
-  surfaceRaised: '#1E130C',
-  glass: 'rgba(28, 17, 10, 0.62)',
-  glassStrong: 'rgba(36, 22, 13, 0.82)',
-  border: 'rgba(255, 150, 80, 0.13)',
-  borderStrong: 'rgba(255, 150, 80, 0.28)',
-  hairline: 'rgba(255, 255, 255, 0.06)',
+  bg: '#131416',
+  bgDeep: '#0E0F10',
+  surface: '#18191B',
+  surfaceRaised: '#232427',
+  glass: 'rgba(48,50,54,0.55)',
+  glassStrong: 'rgba(40,42,46,0.85)',
+  border: 'rgba(255,255,255,0.09)',
+  borderStrong: 'rgba(255,255,255,0.18)',
+  hairline: 'rgba(255,255,255,0.06)',
 
-  emberDeep: '#A83C00',
-  emberMid: '#C9520A',
-  accent: '#E8782A',
-  accentLight: '#F2A05C',
-  accentSoft: 'rgba(232, 120, 42, 0.16)',
+  emberDeep: '#B84A0C',
+  emberMid: '#D9601A',
+  accent: '#F57925',
+  accentLight: '#FF9A52',
+  accentSoft: 'rgba(245,121,37,0.16)',
+  /** white text sits on this (4.7:1), never on the bright orange */
+  accentButton: '#C2500F',
 
-  text: '#FFFFFF',
-  text2: '#B9ADA7',
-  text3: '#8A7E78', // 5.1:1 on bg (HIG accessibility: 4.5:1 for small text)
-  textOnAccent: '#1A0C04',
+  text: '#F5F5F5',
+  text2: '#B9BABD', // silver – 9.5:1 on bg
+  text3: '#8E9095', // 5.8:1 on bg
+  textOnAccent: '#131416',
+  graphite: '#303236',
+  silver: '#B9BABD',
 
   danger: '#E5484D',
-  success: '#E8782A', // success states stay on-brand (no green)
-  track: 'rgba(255, 255, 255, 0.08)',
+  success: '#F57925', // success states stay on-brand (no green)
+  track: 'rgba(255,255,255,0.10)',
 } as const;
 
-/** Light surfaces (workout detail, nutrition, add-food) – approved light mockups. */
+/** Light content panels (diary, planning, forms) – graphite text on soft gray. */
 export const light = {
-  bg: '#F6F5F4',
+  bg: '#F2F2F3',
   card: '#FFFFFF',
-  cardSoft: '#F0EEEC',
-  border: 'rgba(20, 12, 6, 0.07)',
-  text: '#141010',
-  text2: '#6E6763',
-  text3: '#736B66', // 4.8:1 on bg
-  accent: '#F26B1D',
-  accentDeep: '#E2550A',
-  accentText: '#C2410C', // orange for small text on white: 5.2:1 (accent itself is 3.05:1 – icons/large text only)
-  accentSoft: 'rgba(242, 107, 29, 0.12)',
-  track: '#ECE8E5',
-  protein: '#3BB273', // semantic macro colours from the mockup (not brand colours)
-  carbs: '#F26B1D',
+  cardSoft: '#ECECEE',
+  border: 'rgba(19,20,22,0.08)',
+  text: '#131416',
+  text2: '#5E6065', // 5.6:1
+  text3: '#6B6D72', // 4.6:1
+  accent: '#F57925',
+  accentDeep: '#D9601A',
+  accentText: '#C2410C', // orange for small text on white: 5.2:1
+  accentSoft: 'rgba(245,121,37,0.12)',
+  track: '#E4E4E7',
+  protein: '#3BB273',
+  carbs: '#F57925',
   fat: '#F2C230',
 } as const;
 

@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.medium, fontSize: 14.5, color: light.text },
   section: { marginTop: space.xl, marginBottom: 10 },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  ghost: { minHeight: 48, borderRadius: radius.pill, borderWidth: 1.5, borderColor: '#DCD5D0', alignItems: 'center', justifyContent: 'center' },
+  ghost: { minHeight: 48, borderRadius: radius.pill, borderWidth: 1.5, borderColor: '#D4D5D8', alignItems: 'center', justifyContent: 'center' },
   ghostText: { fontFamily: fonts.semibold, fontSize: 14.5, color: light.text },
   primary: { minHeight: 48, borderRadius: radius.pill, backgroundColor: light.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   primaryText: { fontFamily: fonts.bold, fontSize: 15, color: '#fff' },

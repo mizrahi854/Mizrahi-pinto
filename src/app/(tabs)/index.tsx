@@ -1,378 +1,346 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import Svg, { Path, Circle, Defs, LinearGradient as SvgLG, Stop } from 'react-native-svg';
 import { useApp } from '@/store/useApp';
-import { useDay, useWeek, useNextWorkout } from '@/store/selectors';
-import { Logo, HeroBackdrop, SideRulers, WaveHeader, useScreenWidth } from '@/components/Brand';
-import { DotNumber } from '@/components/DotMatrix';
-import { NumRow } from '@/components/MacroCard';
-import { IconButton, ProgressBar, Ring, Row, Sheet, Tap, ListItem, Badge } from '@/components/ui';
+import { useDay, useWeek, useNextWorkout, useMeals } from '@/store/selectors';
+import { HeroBackdrop, LogoMark, useScreenWidth } from '@/components/Brand';
+import { Glass, GlassIcon, ProgressRing, Bar } from '@/components/glass';
+import { useCountUp } from '@/components/DotMatrix';
+import { Tap, Sheet, ListItem, toast } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
-import { colors, fonts, radius, space, type } from '@/theme/tokens';
+import { colors, fonts, space } from '@/theme/tokens';
 import { dateKey, greeting, addDays, DAY_SHORT, prettyDate, weekOf } from '@/lib/dates';
-import { fmt } from '@/lib/nutrition';
 import { challengeStats } from '@/lib/challenge';
-import { MUSCLE_ART } from '@/data/media';
+import { MEAL_PHOTO, ANATOMY } from '@/data/media';
 import { whenLabel, MUSCLE_LABELS } from '@/lib/workouts';
 import { restaurantLabel } from '@/lib/restaurants';
 import { useInbox } from '@/lib/inbox';
-import { toast } from '@/components/ui';
 import { haptic } from '@/lib/haptics';
 import type { PlannedWorkout } from '@/data/types';
 
-const HERO_H = 380;
+const SUB = ['מוכנים לעוד יום של התקדמות?', 'צעד קטן היום, הרגל גדול מחר.', 'מה בתוכנית להיום?'];
 
-/** 14 Home – approved composition (dot number, sunken wave, bento, next workout, victory days) */
+/** Home – approved "625" composition: blurred figure, centred logo, glass gauge card, next workout, today's meals, week, shortcuts. */
 export default function Home() {
   const insets = useSafeAreaInsets();
   const w = useScreenWidth();
   const reduce = useReducedMotion();
   const today = dateKey();
   const day = useDay(today);
-  const profile = useApp((s) => s.profile);
-  const challenges = useApp((s) => s.challenges);
-  const events = useApp((s) => s.events);
-  const shabbat = useApp((s) => s.shabbat);
-  const complete = useApp((s) => s.completeWorkout);
-  const reopen = useApp((s) => s.reopenWorkout);
-  const upsertWorkout = useApp((s) => s.upsertWorkout);
   const week = useWeek(today);
+  const meals = useMeals();
+  const profile = useApp((st) => st.profile);
+  const challenges = useApp((st) => st.challenges);
+  const events = useApp((st) => st.events);
+  const shabbat = useApp((st) => st.shabbat);
+  const reminders = useApp((st) => st.reminders);
+  const water = useApp((st) => st.water[today] ?? 0);
+  const addWater = useApp((st) => st.addWater);
+  const complete = useApp((st) => st.completeWorkout);
+  const reopen = useApp((st) => st.reopenWorkout);
   const { next, missed } = useNextWorkout();
   const inbox = useInbox();
-  const [menu, setMenu] = useState(false);
   const [resched, setResched] = useState<PlannedWorkout | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   const t = day.target;
   const consumed = day.totals.kcal;
-  const over = day.remaining != null && day.remaining < 0;
-
-  // Hero metric: calories only for adults who chose calorie tracking; otherwise meals (habits)
-  const hero = day.hasTarget
-    ? { value: Math.abs(day.remaining!), label: over ? 'קלוריות מעל היעד היום' : 'קלוריות נותרו להיום', pill: `מתוך ${t.calorieTarget!.toLocaleString()} קק״ל`, progress: consumed / t.calorieTarget! }
-    : day.calories
-      ? { value: consumed, label: 'קלוריות שתועדו היום', pill: 'מעקב ללא יעד', progress: Math.min(1, day.mealsLogged / 4) }
-      : { value: day.mealsLogged, label: 'ארוחות שתועדו היום', pill: 'ארוחות סדירות, אנרגיה לאימון', progress: Math.min(1, day.mealsLogged / 4) };
-
-  const art = next ? next.muscles.map((m) => MUSCLE_ART[m]).find(Boolean) ?? MUSCLE_ART.full : MUSCLE_ART.full;
-  const outing = useMemo(() => events.filter((e) => e.type === 'restaurant' && e.date >= today).sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')))[0], [events, today]);
-  const ws = weekOf(today)[0]!;
-  const shabbatMeals = shabbat.meals.filter((m) => m.enabled);
-  const challenge = challenges.find((c) => !c.finished);
-  const cs = challenge ? challengeStats(challenge) : null;
-
-  const done = (w: PlannedWorkout) => {
-    complete(w.id);
-    haptic.success();
-    toast(`${w.name} הושלם ✓ – האימון הבא מוצג`, { label: 'ביטול', onPress: () => reopen(w.id) });
-  };
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 500);
-  }, []);
-
+  const hour = new Date().getHours();
   const firstName = profile.name.trim().split(' ')[0];
 
+  // centre metric: remaining calories (adult tracking) – otherwise a routine metric that never limits eating
+  const metric = day.hasTarget
+    ? { value: Math.max(0, day.remaining!), label: 'קלוריות נשארו', sub: `מתוך ${t.calorieTarget!.toLocaleString()}`, progress: consumed / t.calorieTarget!, icon: 'flame' as IconName, over: day.remaining! < 0 ? Math.abs(day.remaining!) : 0 }
+    : day.calories
+      ? { value: consumed, label: 'קלוריות היום', sub: 'מעקב ללא יעד', progress: Math.min(1, day.mealsLogged / 4), icon: 'flame' as IconName, over: 0 }
+      : { value: day.mealsLogged, label: 'ארוחות היום', sub: 'שגרה, לא הגבלה', progress: Math.min(1, day.mealsLogged / 4), icon: 'bowl' as IconName, over: 0 };
+  const shown = useCountUp(metric.over || metric.value);
+
+  const outing = useMemo(() => events.filter((e) => e.type === 'restaurant' && e.date >= today).sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')))[0], [events, today]);
+  const ws = weekOf(today)[0]!;
+  const challenge = challenges.find((c) => !c.finished);
+  const cs = challenge ? challengeStats(challenge) : null;
+  const nextReminder = reminders.filter((r) => r.enabled).map((r) => r.time).sort()[0];
+  const waterTarget = profile.waterTargetMl || 3000;
+
+  const done = (wk: PlannedWorkout) => {
+    complete(wk.id);
+    haptic.success();
+    toast(`${wk.name} הושלם ✓`, { label: 'ביטול', onPress: () => reopen(wk.id) });
+  };
+  const enter = (i: number) => (reduce ? undefined : FadeInDown.delay(60 * i).duration(420));
+
   return (
-    <View style={styles.root}>
-      <View style={[styles.inner, { width: w }]}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
-        >
-          {/* ---------- HERO ---------- */}
-          <View style={{ height: HERO_H + insets.top }}>
-            <HeroBackdrop height={HERO_H + insets.top + 60} />
-            <SideRulers top={insets.top + 92} height={220} />
-            <View style={[styles.topRow, { paddingTop: insets.top + 10 }]}>
-              <Logo />
-              <IconButton icon="dots" label="תפריט" onPress={() => setMenu(true)} size={48} />
+    <View style={s.root}>
+      <View style={[s.inner, { width: w }]}>
+        <HeroBackdrop height={insets.top + 420} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 130 }}>
+          {/* ---------- TOP BAR ---------- */}
+          <View style={[s.top, { paddingTop: insets.top + 12 }]}>
+            <GlassIcon icon="user" label="פרופיל" onPress={() => router.push('/(tabs)/profile')} />
+            <View style={s.logo} accessible accessibilityRole="header" accessibilityLabel="MIZRAHI PINTO">
+              <LogoMark size={46} />
+              <Text style={s.logoText}>MIZRAHI{'\n'}PINTO</Text>
             </View>
-            <View style={styles.heroCenter}>
-              {firstName ? <Text style={styles.greeting}>{greeting()}, {firstName}</Text> : null}
-              <Animated.View entering={reduce ? undefined : FadeInDown.duration(500)}>
-                <DotNumber value={hero.value} dot={7.4} gap={3.3} label={`${hero.value} ${hero.label}`} />
-              </Animated.View>
-              <Text style={styles.heroLabel}>{hero.label}</Text>
-              <Tap onPress={() => router.push('/(tabs)/diary')} label={hero.pill}>
-                <View style={styles.pill}>
-                  <Icon name="chart" size={14} color={colors.accentLight} />
-                  <Text style={styles.pillText}>{hero.pill}</Text>
-                </View>
-              </Tap>
-            </View>
+            <GlassIcon icon="bell" label={`התראות${inbox.length ? `, ${inbox.length} חדשות` : ''}`} dot={inbox.length > 0} onPress={() => router.push('/notifications')} />
           </View>
 
-          {/* ---------- WAVE + PANEL ---------- */}
-          <WaveHeader progress={hero.progress} height={96} />
-          <View style={styles.panel}>
-            <Row gap={10}>
-              <Tile onPress={() => router.push('/add-meal')} label="הוסף ארוחה" style={{ flex: 1 }}>
-                <Row style={{ justifyContent: 'space-between', flex: 1 }}>
-                  <View style={{ gap: 4 }}>
-                    <Icon name="food" size={24} />
-                    <Text style={styles.tileTitle}>הוסף ארוחה</Text>
-                    <Text style={styles.tileSub}>צילום, ברקוד, חיפוש</Text>
-                  </View>
-                  <View style={styles.plusDot}><Icon name="plus" size={20} color={colors.text} /></View>
-                </Row>
-              </Tile>
-              <Tile onPress={() => router.push('/(tabs)/diary')} label="יומן תזונה" style={{ flex: 1 }}>
-                <Row style={{ justifyContent: 'space-between', flex: 1 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Icon name="chart" size={24} />
-                    <Text style={styles.tileTitle}>יומן תזונה</Text>
-                    {day.calories ? <NumRow value={consumed.toLocaleString()} target={t.calorieTarget ? t.calorieTarget.toLocaleString() : undefined} unit="קק״ל" size={14} /> : <Text style={styles.tileSub}>{day.mealsLogged}/4 ארוחות</Text>}
-                  </View>
-                  <Ring value={day.hasTarget ? consumed / t.calorieTarget! : day.mealsLogged / 4} size={50} stroke={4} />
-                </Row>
-              </Tile>
-            </Row>
+          <View style={s.greet}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name={hour >= 6 && hour < 18 ? 'sun' : 'moon'} size={26} color={colors.accent} />
+              <Text style={s.hello}>{greeting()}{firstName ? `, ${firstName}` : ''}</Text>
+            </View>
+            <Text style={s.helloSub}>{SUB[new Date().getDate() % SUB.length]}</Text>
+          </View>
 
-            {day.calories && (
-              <Row gap={8} style={{ marginTop: 10 }}>
-                <Mini icon="protein" title="חלבון" value={fmt(day.totals.protein)} target={t.proteinTarget} unit="ג׳" onPress={() => router.push('/(tabs)/diary')} />
-                <Mini icon="wheat" title="פחמימות" value={fmt(day.totals.carbs)} target={t.carbsTarget} unit="ג׳" onPress={() => router.push('/(tabs)/diary')} />
-                <Mini icon="fat" title="שומנים" value={fmt(day.totals.fat)} target={t.fatTarget} unit="ג׳" onPress={() => router.push('/(tabs)/diary')} />
-              </Row>
-            )}
+          <View style={s.body}>
+            {/* ---------- GAUGE CARD ---------- */}
+            <Animated.View entering={enter(0)}>
+              <Glass glow onPress={() => router.push('/(tabs)/diary')} label={`${metric.value} ${metric.label}. ${metric.sub}. ליומן התזונה`} style={s.gaugeCard}>
+                <View style={s.gaugeRow}>
+                  <View style={{ flex: 1, gap: 12, justifyContent: 'center' }}>
+                    {day.calories ? (
+                      <>
+                        <MacroLine icon="food" title="חלבון" v={day.totals.protein} t={t.proteinTarget} />
+                        <MacroLine icon="wheat" title="פחמימות" v={day.totals.carbs} t={t.carbsTarget} />
+                        <MacroLine icon="drop" title="שומנים" v={day.totals.fat} t={t.fatTarget} />
+                      </>
+                    ) : (
+                      <>
+                        <HabitLine icon="bowl" title="ארוחות שתועדו" v={`${day.mealsLogged} / 4`} p={day.mealsLogged / 4} />
+                        <HabitLine icon="dumbbell" title="אימונים השבוע" v={`${week.workouts.done} / ${week.workouts.planned}`} p={week.workouts.planned ? week.workouts.done / week.workouts.planned : 0} />
+                        <HabitLine icon="drop" title="שתייה" v={`${(water / 1000).toFixed(1)} / ${(waterTarget / 1000).toFixed(1)} ל׳`} p={water / waterTarget} />
+                      </>
+                    )}
+                  </View>
+                  <View style={s.divider} />
+                  <ProgressRing value={metric.progress} size={164} stroke={11}>
+                    <Icon name={metric.icon} size={26} color={colors.accent} />
+                    <Text style={s.ringNum} accessibilityElementsHidden>{shown.toLocaleString()}</Text>
+                    <Text style={s.ringLabel}>{metric.over ? 'מעל היעד היום' : metric.label}</Text>
+                    <Text style={s.ringSub}>{metric.sub}</Text>
+                  </ProgressRing>
+                </View>
+              </Glass>
+            </Animated.View>
 
-            {/* ---------- MISSED WORKOUT (reschedule / cancel / done) ---------- */}
+            {/* ---------- MISSED ---------- */}
             {missed[0] && (
-              <View style={styles.missed}>
-                <Text style={styles.listTitle}>{missed[0].name} · {prettyDate(missed[0].date)} – לא סומן</Text>
-                <Row gap={8} style={{ marginTop: 8, flexWrap: 'wrap' }}>
-                  <SmallBtn icon="check" label="הושלם" onPress={() => done(missed[0]!)} />
-                  <SmallBtn icon="calendar" label="דחייה למחר" onPress={() => { useApp.getState().moveWorkout(missed[0]!.id, addDays(today, 1)); toast('נדחה למחר'); }} />
-                  <SmallBtn icon="close" label="ביטול" onPress={() => { const w = missed[0]!; useApp.getState().skipWorkout(w.id); toast('בוטל', { label: 'ביטול', onPress: () => reopen(w.id) }); }} />
-                </Row>
-              </View>
+              <Glass style={s.missed}>
+                <Text style={s.cardTitle}>{missed[0].name} · {prettyDate(missed[0].date)} – לא סומן</Text>
+                <View style={s.pills}>
+                  <Pill icon="check" label="הושלם" onPress={() => done(missed[0]!)} />
+                  <Pill icon="calendar" label="דחייה למחר" onPress={() => { useApp.getState().moveWorkout(missed[0]!.id, addDays(today, 1)); toast('נדחה למחר'); }} />
+                  <Pill icon="close" label="ביטול" onPress={() => { const x = missed[0]!; useApp.getState().skipWorkout(x.id); toast('בוטל', { label: 'ביטול', onPress: () => reopen(x.id) }); }} />
+                </View>
+              </Glass>
             )}
 
             {/* ---------- NEXT WORKOUT ---------- */}
-            <View style={styles.workout}>
-              <LinearGradient colors={['rgba(232,120,42,0.16)', 'rgba(20,12,8,0)']} start={{ x: 0, y: 0.5 }} end={{ x: 0.6, y: 0.5 }} style={StyleSheet.absoluteFill} />
-              {art ? <View style={styles.workoutArt} pointerEvents="none"><Image source={art} style={{ width: 150, height: 150, opacity: 0.5 }} contentFit="contain" accessibilityIgnoresInvertColors /></View> : null}
-              <Tap onPress={() => router.push(next ? { pathname: '/workout', params: { id: next.id } } : { pathname: '/workout' })} label={next ? `האימון הבא שלך: ${next.name}, ${whenLabel(next)}` : 'אין אימון מתוכנן. הוספת אימון'}>
-                <View style={{ alignItems: 'flex-start', minHeight: 84, justifyContent: 'center' }}>
-                  <Text style={styles.workoutKicker}>האימון הבא שלך</Text>
-                  <Text style={styles.workoutName}>{next?.name ?? 'אין אימון מתוכנן'}</Text>
-                  <Text style={styles.workoutFocus}>{next ? `${whenLabel(next)}${next.muscles.length ? ` · ${next.muscles.map((m) => MUSCLE_LABELS[m]).join(', ')}` : ''}` : 'הוספת אימון לתוכנית השבועית'}</Text>
-                </View>
-              </Tap>
-              {next ? (
-                <Row gap={8} style={{ marginTop: 12, flexWrap: 'wrap' }}>
-                  <SmallBtn icon="check" label="הושלם" primary onPress={() => done(next)} />
-                  <SmallBtn icon="clock" label="שינוי מועד" onPress={() => setResched(next)} />
-                  <SmallBtn icon={next.reminder ? 'bell' : 'mute'} label={next.reminder ? 'תזכורת פעילה' : 'הפעלת תזכורת'} onPress={() => { upsertWorkout({ ...next, reminder: !next.reminder }); toast(next.reminder ? 'התזכורת כובתה' : 'התזכורת הופעלה'); }} />
-                </Row>
-              ) : (
-                <Row gap={8} style={{ marginTop: 12 }}><SmallBtn icon="plus" label="הוספת אימון" primary onPress={() => router.push('/workout')} /></Row>
-              )}
-            </View>
-
-            {/* ---------- WEEK ---------- */}
-            <Tap onPress={() => router.push('/(tabs)/plan')} label={`התוכנית השבועית: ${week.workouts.done} מתוך ${week.workouts.planned} אימונים הושלמו`}>
-              <View style={styles.listCard}>
-                <View style={{ flex: 1, gap: 8 }}>
-                  <Row style={{ justifyContent: 'space-between' }}>
-                    <Text style={styles.listTitle}>התוכנית השבועית</Text>
-                    <Text style={styles.tileSub}>{week.workouts.done}/{week.workouts.planned} אימונים</Text>
-                  </Row>
-                  <View style={styles.weekRow}>
-                    {week.days.map((d, i) => {
-                      const ws2 = d.workouts.filter((w) => !w.rest);
-                      const isDone = ws2.length > 0 && ws2.every((w) => w.status === 'done');
-                      return (
-                        <View key={d.date} style={styles.weekDay}>
-                          <Text style={[styles.weekLabel, d.date === today && { color: colors.accentLight }]}>{DAY_SHORT[i]}</Text>
-                          <View style={[styles.weekDot, ws2.length > 0 && styles.weekDotPlanned, isDone && styles.weekDotDone]}>{isDone ? <Icon name="check" size={12} color={colors.textOnAccent} strokeWidth={3} /> : null}</View>
-                        </View>
-                      );
-                    })}
+            <Animated.View entering={enter(1)}>
+              <Glass padded={false} style={s.workout}>
+                <Image source={ANATOMY.torso} style={s.torso} contentFit="cover" accessibilityIgnoresInvertColors />
+                <Tap onPress={() => router.push(next ? { pathname: '/workout', params: { id: next.id } } : { pathname: '/workout' })} label={next ? `האימון הבא שלך: ${next.name}, ${whenLabel(next)}` : 'אין אימון מתוכנן. הוספת אימון'}>
+                  <View style={s.workoutBody}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Icon name="dumbbell" size={24} color={colors.accent} strokeWidth={2} />
+                      <Text style={s.kicker}>האימון הבא</Text>
+                    </View>
+                    <Text style={s.workoutName} numberOfLines={1}>{next?.name ?? 'אין אימון מתוכנן'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Icon name="clock" size={18} color={colors.text2} />
+                      <Text style={s.when}>{next ? whenLabel(next).replace(' | ', '  |  ') : 'הוספה לתוכנית השבועית'}</Text>
+                    </View>
+                    {next && next.muscles.length > 0 && <Text style={s.muscles} numberOfLines={1}>{next.muscles.map((m) => MUSCLE_LABELS[m]).join(' · ')}</Text>}
                   </View>
+                </Tap>
+                <View style={[s.pills, { paddingHorizontal: 16, paddingBottom: 14 }]}>
+                  {next ? (
+                    <>
+                      <Pill icon="check" label="הושלם" primary onPress={() => done(next)} />
+                      <Pill icon="clock" label="שינוי מועד" onPress={() => setResched(next)} />
+                      <Pill icon="calendar" label="לתוכנית" onPress={() => router.push('/(tabs)/plan')} />
+                    </>
+                  ) : <Pill icon="plus" label="הוספת אימון" primary onPress={() => router.push('/workout')} />}
                 </View>
-              </View>
-            </Tap>
+              </Glass>
+            </Animated.View>
 
-            <Row gap={10} style={{ marginTop: 12 }}>
-              <Tile onPress={() => router.push({ pathname: '/shabbat', params: { week: ws } })} label="תוכנית שישי ושבת" style={{ flex: 1 }}>
-                <View style={{ gap: 4 }}>
-                  <Icon name="star" size={22} />
-                  <Text style={styles.tileTitle}>שישי ושבת</Text>
-                  <Text style={styles.tileSub} numberOfLines={2}>{shabbat.appliedWeeks.includes(ws) ? 'בתוכנית השבוע ✓' : shabbatMeals.length ? `${shabbatMeals.length} ארוחות מוגדרות` : 'תכנון ארוחות ואימון'}</Text>
+            {/* ---------- TODAY'S MEALS ---------- */}
+            <Animated.View entering={enter(2)}>
+              <Glass>
+                <View style={s.rowHead}>
+                  <Icon name="bowl" size={24} color={colors.accent} />
+                  <Text style={s.cardTitle}>יומן תזונה – היום</Text>
+                  <View style={{ flex: 1 }} />
+                  <Tap onPress={() => router.push('/add-meal')} label="הוסף ארוחה"><View style={s.addSq}><Icon name="plus" size={22} color={colors.accent} strokeWidth={2.2} /></View></Tap>
                 </View>
-              </Tile>
-              <Tile onPress={() => router.push(outing ? { pathname: '/restaurant', params: { event: outing.id } } : '/restaurant')} label="מצב מסעדה" style={{ flex: 1 }}>
-                <View style={{ gap: 4 }}>
-                  <Icon name="food" size={22} />
-                  <Text style={styles.tileTitle}>מסעדה</Text>
-                  <Text style={styles.tileSub} numberOfLines={2}>{outing ? `${prettyDate(outing.date)}${outing.time ? ` ${outing.time}` : ''} · ${outing.title || restaurantLabel(outing.restaurantType)}` : 'אני יוצא למסעדה'}</Text>
+                <View style={s.mealRow}>
+                  {meals.slice(0, 4).map((m) => {
+                    const list = day.list.filter((e) => e.meal === m.key);
+                    const has = list.length > 0;
+                    const photo = list.find((e) => e.photoUri)?.photoUri;
+                    return (
+                      <Tap key={m.key} onPress={() => router.push(has ? { pathname: '/meal', params: { date: today, meal: m.key } } : { pathname: '/add-meal', params: { meal: m.key } })} label={`${m.label}: ${has ? `${list.length} פריטים${day.calories ? `, ${list.reduce((a, e) => a + (e.nutrients.kcal ?? 0), 0)} קלוריות` : ''}` : 'טרם תועד, להוספה'}`} style={{ flex: 1 }}>
+                        <View style={s.meal}>
+                          <View style={[s.mealImgWrap, !has && { opacity: 0.55 }]}>
+                            <Image source={photo ? { uri: photo } : MEAL_PHOTO[m.key]} style={s.mealImg} contentFit="cover" />
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <View style={[s.check, has && s.checkOn]}><Icon name={has ? 'check' : 'plus'} size={12} color={has ? colors.accent : colors.text2} strokeWidth={2.6} /></View>
+                            <Text style={s.mealLabel} numberOfLines={1}>{m.label.replace('ארוחת ', '').replace('ארוחות ביניים', 'נשנוש')}</Text>
+                          </View>
+                        </View>
+                      </Tap>
+                    );
+                  })}
                 </View>
-              </Tile>
-            </Row>
+                {day.calories && (
+                  <Tap onPress={() => router.push('/add-calories')} label="הזנה מהירה של קלוריות">
+                    <View style={s.quickKcal}>
+                      <Icon name="flame" size={20} color={colors.accent} />
+                      <Text style={s.quickKcalText}>הזנה מהירה של קלוריות</Text>
+                      <View style={{ flex: 1 }} />
+                      <Text style={s.quickKcalHint}>בלי ליצור מוצר</Text>
+                    </View>
+                  </Tap>
+                )}
+              </Glass>
+            </Animated.View>
 
-            {/* ---------- VICTORY DAYS ---------- */}
-            <Tap onPress={() => router.push(challenge ? `/victory/${challenge.id}` : '/victory/new')} label="ימים לניצחון">
-              <View style={styles.victory}>
-                <View style={{ flex: 1, gap: 10 }}>
-                  <Row gap={8}>
-                    <Icon name="trophy" size={22} />
-                    <Text style={styles.victoryTitle} numberOfLines={1}>{challenge ? challenge.name : 'ימים לניצחון על אליאן'}</Text>
-                  </Row>
-                  {cs ? (
-                    <Row gap={10}>
-                      <View style={{ flex: 1 }}><ProgressBar value={cs.progress} height={10} /></View>
-                      <Text style={styles.victoryPct}>רצף {cs.streak}</Text>
-                    </Row>
-                  ) : (
-                    <Text style={styles.tileSub}>אתגר התמדה: אימונים, שגרה ומנוחה</Text>
-                  )}
-                </View>
-                <View style={{ alignItems: 'center', minWidth: 80 }}>
-                  {cs ? (<><Text style={styles.victoryNum}>{cs.left}</Text><Text style={styles.tileSub}>ימים ליעד</Text></>) : <View style={styles.plusDot}><Icon name="plus" size={20} color={colors.text} /></View>}
-                </View>
-                <View style={styles.faces} accessibilityElementsHidden>
-                  <Face letter={(profile.name || 'א').trim()[0]!} />
-                  <Face letter={(challenge?.partner || 'א').trim()[0]!} flip />
-                </View>
-              </View>
-            </Tap>
+            {/* ---------- WEEK BALANCE ---------- */}
+            <Animated.View entering={enter(3)}>
+              <Glass onPress={() => router.push('/(tabs)/plan')} label="סיכום שבועי. לתוכנית השבועית">
+                <WeekBalance week={week} />
+              </Glass>
+            </Animated.View>
 
-            {/* ---------- RELEVANT NOTIFICATIONS ---------- */}
-            {inbox.filter((i) => !i.id.startsWith('missed') && !i.id.startsWith('next')).slice(0, 2).map((i) => (
-              <Tap key={i.id} onPress={() => router.push(i.href)} label={`${i.title}. ${i.sub}`}>
-                <View style={styles.listCard}>
-                  <View style={styles.mealIcon}><Icon name={i.icon} size={22} /></View>
-                  <View style={{ flex: 1 }}><Text style={styles.listTitle} numberOfLines={1}>{i.title}</Text><Text style={styles.tileSub} numberOfLines={1}>{i.sub}</Text></View>
-                  <Icon name="chevronBack" size={18} color={colors.text2} />
-                </View>
-              </Tap>
-            ))}
-
-            <Tap onPress={() => router.push('/premium')} label="Premium">
-              <View style={styles.listCard}>
-                <Icon name="crown" size={24} />
-                <View style={{ flex: 1 }}><Text style={styles.listTitle}>Premium</Text><Text style={styles.tileSub}>זיהוי AI, תוכנית אישית, דוחות ותזכורות חכמות</Text></View>
-                <Badge text="בקרוב" />
-              </View>
-            </Tap>
+            {/* ---------- SHORTCUTS ---------- */}
+            <View style={s.grid}>
+              <Short icon="calendar" title="תוכנית שבועית" sub={`${week.workouts.done}/${week.workouts.planned} אימונים · ${week.mealsPlanned} ארוחות`} onPress={() => router.push('/(tabs)/plan')} />
+              <Short icon="trend" title="ההתקדמות שלי" sub="משקל, מדדים ודוחות" onPress={() => router.push('/reports')} />
+              <Short icon="cloche" title="מצב מסעדה" sub={outing ? `${prettyDate(outing.date)} · ${outing.title || restaurantLabel(outing.restaurantType)}` : 'תכנון יציאה ובחירת מנה'} onPress={() => router.push(outing ? { pathname: '/restaurant', params: { event: outing.id } } : '/restaurant')} />
+              <Short icon="star" title="שישי–שבת" sub={shabbat.appliedWeeks.includes(ws) ? 'בתוכנית השבוע ✓' : 'תוכנית ייחודית לסוף השבוע'} onPress={() => router.push({ pathname: '/shabbat', params: { week: ws } })} />
+              <Short icon="trophy" title="ימים לניצחון" sub={cs ? `${cs.left} ימים · רצף ${cs.streak}` : 'על אליאן – אתגר התמדה'} progress={cs?.progress} onPress={() => router.push(challenge ? `/victory/${challenge.id}` : '/victory/new')} />
+              <Short icon="drop" title="צריכת מים" sub={`${(water / 1000).toFixed(1)} / ${(waterTarget / 1000).toFixed(1)} ל׳ · הקש לכוס`} progress={water / waterTarget} onPress={() => { addWater(250); haptic.success(); toast('נוספה כוס מים (250 מ״ל)', { label: 'ביטול', onPress: () => addWater(-250) }); }} />
+              <Short icon="alarm" title="תזכורות" sub={nextReminder ? `הבאה: ${nextReminder}` : 'הגדרת תזכורת בוקר'} onPress={() => router.push('/alarm')} />
+              <Short icon="crown" title="Premium" sub="בקרוב · ללא חיוב" onPress={() => router.push('/premium')} />
+            </View>
           </View>
         </ScrollView>
-
         <RescheduleSheet w={resched} onClose={() => setResched(null)} />
-        <Sheet visible={menu} onClose={() => setMenu(false)} title="תפריט">
-          {([
-            ['bell', 'מרכז התראות', '/notifications'], ['alarm', 'תזכורות ושעון מעורר', '/alarm'], ['trophy', 'ימים לניצחון', '/victory'],
-            ['calc', 'מחשבונים וכלים', '/tools'], ['chart', 'דוחות', '/reports'], ['settings', 'הגדרות', '/settings'],
-          ] as [IconName, string, string][]).map(([ic, l, href]) => (
-            <ListItem key={href} icon={ic} title={l} onPress={() => { setMenu(false); router.push(href as any); }} />
-          ))}
-        </Sheet>
       </View>
     </View>
   );
 }
 
-function Tile({ children, onPress, label, style }: { children: React.ReactNode; onPress: () => void; label: string; style?: any }) {
+function MacroLine({ icon, title, v, t }: { icon: IconName; title: string; v: number; t: number | null }) {
   return (
-    <Tap onPress={onPress} label={label} style={style}>
-      <View style={styles.tile}>
-        <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0)']} style={[StyleSheet.absoluteFill, { borderRadius: radius.lg }]} pointerEvents="none" />
-        {children}
+    <View style={{ gap: 5 }} accessible accessibilityLabel={`${title}: ${Math.round(v)}${t ? ` מתוך ${t}` : ''} גרם`}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.macroTitle}>{title}</Text>
+          <Text style={s.macroVal}><Text style={{ color: colors.accent }}>{Math.round(v)}</Text>{t ? ` / ${t}` : ''} ג׳</Text>
+        </View>
+        <Icon name={icon} size={24} color={colors.accent} />
       </View>
-    </Tap>
-  );
-}
-
-function Mini({ icon, title, value, target, unit, onPress, hidden }: { icon: IconName; title: string; value: string; target: number | null | undefined; unit: string; onPress: () => void; hidden?: boolean }) {
-  if (hidden) return null;
-  return (
-    <Tap onPress={onPress} label={`${title}: ${value}${target ? ` מתוך ${target}` : ''} ${unit}`} style={{ flex: 1 }}>
-      <View style={styles.mini}>
-        <Icon name={icon} size={22} />
-        <Text style={styles.miniTitle} numberOfLines={1}>{title}</Text>
-        <NumRow value={value} target={target ? String(target) : undefined} unit={unit || undefined} size={14} small={11} />
-      </View>
-    </Tap>
-  );
-}
-
-function Face({ letter, flip }: { letter: string; flip?: boolean }) {
-  return (
-    <View style={[styles.face, flip && { marginStart: -14 }]}>
-      <LinearGradient colors={['#3A2418', '#120A06']} start={{ x: flip ? 1 : 0, y: 0 }} end={{ x: flip ? 0 : 1, y: 1 }} style={StyleSheet.absoluteFill} />
-      <Text style={styles.faceText}>{letter}</Text>
+      <Bar value={t ? v / t : 0} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bgDeep, alignItems: 'center' },
-  inner: { flex: 1, backgroundColor: colors.surface, overflow: 'hidden' },
-  topRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.lg },
-  heroCenter: { alignItems: 'center', marginTop: 30, gap: 10 },
-  greeting: { ...type.label, color: 'rgba(255,255,255,0.72)', fontFamily: fonts.medium, marginBottom: 4 },
-  heroLabel: { fontFamily: fonts.medium, fontSize: 22, color: colors.text, marginTop: 6 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, minHeight: 44, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.22)' },
-  pillText: { ...type.label, color: colors.text, fontFamily: fonts.medium },
-  panel: { backgroundColor: colors.surface, paddingHorizontal: space.md, marginTop: -2, gap: 0 },
-  tile: { minHeight: 104, padding: 14, borderRadius: radius.lg, backgroundColor: 'rgba(22,13,8,0.85)', borderWidth: 1, borderColor: colors.border, overflow: 'hidden', justifyContent: 'center' },
-  tileTitle: { fontFamily: fonts.semibold, fontSize: 16, color: colors.text },
-  tileSub: { ...type.label, color: colors.text2 },
-  plusDot: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  mini: { minHeight: 104, paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.md, backgroundColor: 'rgba(22,13,8,0.85)', borderWidth: 1, borderColor: colors.border, gap: 6 },
-  miniTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
-  workout: { marginTop: 12, minHeight: 132, padding: 18, paddingBottom: 22, borderRadius: radius.lg, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.borderStrong, overflow: 'hidden', justifyContent: 'center' },
-  workoutArt: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 160, alignItems: 'center', justifyContent: 'center' },
-  workoutKicker: { ...type.label, color: colors.text2 },
-  workoutName: { fontFamily: fonts.bold, fontSize: 26, color: colors.text, marginVertical: 2 },
-  workoutFocus: { ...type.label, color: colors.text2 },
-  play: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.emberMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.accentLight },
-  workoutBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, backgroundColor: 'rgba(255,255,255,0.06)', flexDirection: 'row-reverse' },
-  workoutBarFill: { height: 3, backgroundColor: colors.accent },
-  victory: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: radius.lg, backgroundColor: 'rgba(22,13,8,0.85)', borderWidth: 1, borderColor: colors.border },
-  victoryTitle: { fontFamily: fonts.semibold, fontSize: 16, color: colors.text, flexShrink: 1 },
-  victoryPct: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
-  victoryNum: { fontFamily: fonts.bold, fontSize: 34, color: colors.text, lineHeight: 38 },
-  faces: { flexDirection: 'row-reverse', alignItems: 'center' },
-  face: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.borderStrong },
-  faceText: { color: colors.text, fontFamily: fonts.bold, fontSize: 18 },
-  missed: { marginTop: 12, padding: 14, borderRadius: radius.lg, backgroundColor: 'rgba(229,72,77,0.10)', borderWidth: 1, borderColor: 'rgba(229,72,77,0.35)' },
-  small: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: colors.border },
-  smallPrimary: { backgroundColor: colors.accent, borderColor: colors.accent },
-  smallText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
-  weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  weekDay: { alignItems: 'center', gap: 4 },
-  weekLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.text2 },
-  weekDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  weekDotPlanned: { borderColor: colors.accentLight },
-  weekDotDone: { backgroundColor: colors.accentLight, borderColor: colors.accentLight },
-  listCard: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: 'rgba(22,13,8,0.85)', borderWidth: 1, borderColor: colors.border },
-  listTitle: { fontFamily: fonts.semibold, fontSize: 15.5, color: colors.text },
-  mealIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
-});
+function HabitLine({ icon, title, v, p }: { icon: IconName; title: string; v: string; p: number }) {
+  return (
+    <View style={{ gap: 5 }} accessible accessibilityLabel={`${title}: ${v}`}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flex: 1 }}><Text style={s.macroTitle}>{title}</Text><Text style={s.macroVal}>{v}</Text></View>
+        <Icon name={icon} size={22} color={colors.accent} />
+      </View>
+      <Bar value={p} />
+    </View>
+  );
+}
 
-function SmallBtn({ icon, label, onPress, primary }: { icon: IconName; label: string; onPress: () => void; primary?: boolean }) {
+function WeekBalance({ week }: { week: ReturnType<typeof useWeek> }) {
+  const [w, setW] = useState(0);
+  const vals = week.days.map((d) => (week.calories ? (d.logged ? d.totals.kcal : null) : d.workouts.filter((x) => x.status === 'done' && !x.rest).length + d.meals / 4));
+  const known = vals.filter((v): v is number => v != null);
+  const max = Math.max(1, ...known);
+  const H = 56;
+  const pts = vals.map((v, i) => (v == null ? null : { x: w - (i + 0.5) * (w / 7), y: H - 6 - (v / max) * (H - 14) })).filter((p): p is { x: number; y: number } => !!p);
+  const path = pts.reduce((acc, p, i) => {
+    if (i === 0) return `M ${p.x} ${p.y}`;
+    const q = pts[i - 1]!;
+    const cx = (q.x + p.x) / 2;
+    return `${acc} C ${cx} ${q.y}, ${cx} ${p.y}, ${p.x} ${p.y}`;
+  }, '');
+  const diff = week.calories && week.loggedTarget ? week.totalKcal - week.loggedTarget : null;
+  return (
+    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+      <View style={{ width: 122, gap: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="chart" size={22} color={colors.accent} /><Text style={s.cardTitle}>{week.calories ? 'מאזן שבועי' : 'השבוע שלי'}</Text></View>
+        {week.calories ? (
+          <>
+            <Text style={s.balance}>{week.loggedCount ? week.totalKcal.toLocaleString() : '—'}</Text>
+            <Text style={s.small}>{week.loggedTarget ? `מתוך ${week.loggedTarget.toLocaleString()} בימים שתועדו` : `${week.loggedCount} ימי תיעוד`}{diff != null && week.loggedCount && diff > 0 ? ` · ${diff.toLocaleString()} מעל` : ''}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={s.balance}>{week.workouts.done}/{week.workouts.planned}</Text>
+            <Text style={s.small}>אימונים · {week.loggedCount} ימי תיעוד</Text>
+          </>
+        )}
+      </View>
+      <View style={{ flex: 1 }} onLayout={(e) => setW(e.nativeEvent.layout.width)} accessible accessibilityLabel={`גרף השבוע: ${week.loggedCount} ימים עם תיעוד`}>
+        {w > 0 && (
+          <Svg width={w} height={H}>
+            <Defs>
+              <SvgLG id="wb" x1="1" y1="0" x2="0" y2="0"><Stop offset="0" stopColor={colors.emberMid} /><Stop offset="1" stopColor={colors.accentLight} /></SvgLG>
+            </Defs>
+            {pts.length > 1 && <Path d={path} stroke="url(#wb)" strokeWidth={2.4} fill="none" strokeLinecap="round" />}
+            {pts.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 5 : 3} fill={i === pts.length - 1 ? '#fff' : colors.text2} stroke={colors.accent} strokeWidth={i === pts.length - 1 ? 2.5 : 0} />)}
+          </Svg>
+        )}
+        <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-around' }}>{DAY_SHORT.map((d) => <Text key={d} style={s.dayLbl}>{d}</Text>)}</View>
+      </View>
+    </View>
+  );
+}
+
+function Short({ icon, title, sub, onPress, progress }: { icon: IconName; title: string; sub: string; onPress: () => void; progress?: number }) {
+  return (
+    <View style={s.shortWrap}>
+      <Glass onPress={onPress} label={`${title}. ${sub}`} style={s.short}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.shortTitle} numberOfLines={1}>{title}</Text>
+            <Text style={s.small} numberOfLines={2}>{sub}</Text>
+          </View>
+          <Icon name={icon} size={26} color={colors.accent} />
+        </View>
+        {progress != null && <View style={{ marginTop: 8 }}><Bar value={progress} /></View>}
+      </Glass>
+    </View>
+  );
+}
+
+function Pill({ icon, label, onPress, primary }: { icon: IconName; label: string; onPress: () => void; primary?: boolean }) {
   return (
     <Tap onPress={onPress} label={label}>
-      <View style={[styles.small, primary && styles.smallPrimary]}>
-        <Icon name={icon} size={18} color={primary ? colors.textOnAccent : colors.text} />
-        <Text style={[styles.smallText, primary && { color: colors.textOnAccent }]}>{label}</Text>
+      <View style={[s.pill, primary && s.pillPrimary]}>
+        <Icon name={icon} size={17} color={primary ? colors.textOnAccent : colors.text} strokeWidth={2} />
+        <Text style={[s.pillText, primary && { color: colors.textOnAccent }]}>{label}</Text>
       </View>
     </Tap>
   );
 }
 
-/** Quick reschedule: tomorrow same time, +1h, next week, or full edit. */
+/** Quick reschedule: tomorrow, +1h, next week, or full edit. */
 function RescheduleSheet({ w, onClose }: { w: PlannedWorkout | null; onClose: () => void }) {
-  const move = useApp((s) => s.moveWorkout);
+  const move = useApp((st) => st.moveWorkout);
   if (!w) return <Sheet visible={false} onClose={onClose}><View /></Sheet>;
   const plusHour = w.time ? `${String(Math.min(23, Number(w.time.slice(0, 2)) + 1)).padStart(2, '0')}${w.time.slice(2)}` : null;
   const opt = (label: string, fn: () => void) => <ListItem key={label} icon="calendar" title={label} onPress={() => { fn(); onClose(); haptic.success(); toast('המועד עודכן'); }} />;
@@ -385,3 +353,55 @@ function RescheduleSheet({ w, onClose }: { w: PlannedWorkout | null; onClose: ()
     </Sheet>
   );
 }
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bgDeep, alignItems: 'center' },
+  inner: { flex: 1, backgroundColor: colors.bg, overflow: 'hidden' },
+  top: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: space.lg },
+  logo: { alignItems: 'center', gap: 4, marginTop: 2 },
+  logoText: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 18, letterSpacing: 1.2, color: colors.text, textAlign: 'center' },
+  greet: { paddingHorizontal: space.lg, marginTop: 18, alignItems: 'flex-start', gap: 4 },
+  hello: { fontFamily: fonts.bold, fontSize: 30, color: colors.text },
+  helloSub: { fontFamily: fonts.regular, fontSize: 16, color: colors.text2 },
+  body: { paddingHorizontal: space.md, marginTop: 26, gap: 12 },
+  gaugeCard: { paddingVertical: 20, borderColor: 'rgba(255,255,255,0.14)' },
+  gaugeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  divider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.14)' },
+  ringNum: { fontFamily: fonts.bold, fontSize: 40, lineHeight: 46, color: colors.text, fontVariant: ['tabular-nums'] },
+  ringLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
+  ringSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.text2 },
+  macroTitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
+  macroVal: { fontFamily: fonts.semibold, fontSize: 16, color: colors.text2, fontVariant: ['tabular-nums'] },
+  missed: { borderColor: 'rgba(229,72,77,0.4)' },
+  workout: { minHeight: 168 },
+  torso: { position: 'absolute', left: -10, top: 0, height: 150, width: '50%', opacity: 0.9 },
+  workoutBody: { padding: 18, paddingBottom: 8, alignItems: 'flex-start', gap: 4 },
+  kicker: { fontFamily: fonts.medium, fontSize: 16, color: colors.text2 },
+  workoutName: { fontFamily: fonts.bold, fontSize: 26, color: colors.text, maxWidth: '62%' },
+  when: { fontFamily: fonts.medium, fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  muscles: { fontFamily: fonts.regular, fontSize: 13, color: colors.text2 },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: 'rgba(48,50,54,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  pillPrimary: { backgroundColor: colors.accent, borderColor: colors.accent },
+  pillText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
+  rowHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  cardTitle: { fontFamily: fonts.bold, fontSize: 17, color: colors.text },
+  addSq: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(245,121,37,0.14)', borderWidth: 1, borderColor: 'rgba(245,121,37,0.4)' },
+  mealRow: { flexDirection: 'row', gap: 8 },
+  meal: { alignItems: 'center', gap: 6 },
+  mealImgWrap: { width: '100%', aspectRatio: 1.45, borderRadius: 16, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' },
+  mealImg: { width: '100%', height: '100%' },
+  check: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: colors.text3, alignItems: 'center', justifyContent: 'center' },
+  checkOn: { borderColor: colors.accent },
+  mealLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.text, flexShrink: 1 },
+  quickKcal: { marginTop: 12, minHeight: 48, borderRadius: 16, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  quickKcalText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
+  quickKcalHint: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.text2 },
+  balance: { fontFamily: fonts.bold, fontSize: 28, color: colors.accent, fontVariant: ['tabular-nums'] },
+  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.text2 },
+  dayLbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.text2 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
+  shortWrap: { width: '50%', padding: 5 },
+  short: { minHeight: 96, borderRadius: 22, paddingVertical: 14 },
+  shortTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+});

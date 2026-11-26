@@ -7,7 +7,7 @@ import { pad } from '@/lib/dates';
 const ITEM = 48;
 
 /** iOS-style snapping wheel (vertical → unaffected by RTL). */
-export function Wheel({ values, value, onChange, label }: { values: number[]; value: number; onChange: (v: number) => void; label: string }) {
+export function Wheel({ values, value, onChange, label, wide }: { values: number[]; value: number; onChange: (v: number) => void; label: string; wide?: boolean }) {
   const ref = useRef<any>(null);
   const last = useRef(values.indexOf(value));
   useEffect(() => {
@@ -24,7 +24,7 @@ export function Wheel({ values, value, onChange, label }: { values: number[]; va
     }
   };
   return (
-    <View style={styles.wheel} accessible accessibilityRole="adjustable" accessibilityLabel={label} accessibilityValue={{ text: pad(value) }}
+    <View style={[styles.wheel, wide && { width: '100%' }]} accessible accessibilityRole="adjustable" accessibilityLabel={label} accessibilityValue={{ text: pad(value) }}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={(e) => {
         const i = Math.max(0, Math.min(values.length - 1, values.indexOf(value) + (e.nativeEvent.actionName === 'increment' ? 1 : -1)));
@@ -55,7 +55,7 @@ export function TimeWheel({ time, onChange }: { time: string; onChange: (t: stri
 
 const styles = StyleSheet.create({
   wheel: { width: 90, height: ITEM * 5, overflow: 'hidden' },
-  highlight: { position: 'absolute', top: ITEM * 2, left: 0, right: 0, height: ITEM, borderRadius: 14, backgroundColor: 'rgba(232,120,42,0.14)', borderWidth: 1, borderColor: colors.borderStrong },
+  highlight: { position: 'absolute', top: ITEM * 2, left: 0, right: 0, height: ITEM, borderRadius: 18, backgroundColor: 'rgba(245,121,37,0.30)', borderWidth: 1, borderColor: 'rgba(255,170,110,0.6)' },
   txt: { fontFamily: fonts.medium, fontSize: 24, color: colors.text3, fontVariant: ['tabular-nums'] },
   txtOn: { color: colors.text, fontFamily: fonts.semibold, fontSize: 30 },
 });

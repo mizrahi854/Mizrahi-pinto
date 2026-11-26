@@ -58,8 +58,8 @@ export function Panel({ title, subtitle, children, onClose = () => goBack(), scr
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
   wrap: { width: '100%', maxWidth: MAX_W, maxHeight: '92%' },
-  sheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,190,140,0.18)', paddingHorizontal: space.md },
-  tint: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,12,8,0.82)' },
+  sheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: space.md },
+  tint: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(28,29,32,0.82)' },
   head: { paddingTop: 10, paddingBottom: 8 },
   grabber: { width: 44, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', alignSelf: 'center', marginBottom: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },

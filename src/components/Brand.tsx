@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Path, Defs, RadialGradient, LinearGradient, Stop, Rect, Line, Ellipse, G } from 'react-native-svg';
@@ -40,59 +41,45 @@ export function Logo({ compact }: { compact?: boolean }) {
   );
 }
 
-/** Dark warm backdrop with ember light entering from the top corner + blurred figure. */
+/** Graphite backdrop: blurred athlete figure, soft orange rim light from the side, no brown wash. */
 export function HeroBackdrop({ height, figure = true }: { height: number; figure?: boolean }) {
   const u = React.useId().replace(/[^a-zA-Z0-9]/g, '');
   const w = useScreenWidth();
   return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { height, overflow: 'hidden' }]}>
-      <Svg width={w} height={height}>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { height, overflow: 'hidden', backgroundColor: colors.bg }]}>
+      <Svg width={w} height={height} style={StyleSheet.absoluteFill}>
         <Defs>
-          <RadialGradient id={`corner${u}`} cx={w * 1.05} cy={-height * 0.05} r={w * 1.1} gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor={colors.emberMid} stopOpacity="0.95" />
-            <Stop offset="0.35" stopColor={colors.emberDeep} stopOpacity="0.55" />
-            <Stop offset="0.75" stopColor="#3A1505" stopOpacity="0.2" />
+          <RadialGradient id={`rim${u}`} cx={w * 0.42} cy={height * 0.32} r={w * 0.55} gradientUnits="userSpaceOnUse">
+            <Stop offset="0" stopColor={colors.accent} stopOpacity="0.32" />
+            <Stop offset="0.45" stopColor={colors.emberDeep} stopOpacity="0.12" />
             <Stop offset="1" stopColor={colors.bg} stopOpacity="0" />
           </RadialGradient>
-          <RadialGradient id={`center${u}`} cx={w / 2} cy={height * 0.82} r={w * 0.7} gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor={colors.emberDeep} stopOpacity="0.55" />
+          <RadialGradient id={`cool${u}`} cx={w * 0.95} cy={height * 0.05} r={w * 0.9} gradientUnits="userSpaceOnUse">
+            <Stop offset="0" stopColor="#3A4250" stopOpacity="0.35" />
             <Stop offset="1" stopColor={colors.bg} stopOpacity="0" />
           </RadialGradient>
-          <LinearGradient id={`streak${u}`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={colors.accentLight} stopOpacity="0" />
-            <Stop offset="0.55" stopColor={colors.accent} stopOpacity="0.55" />
-            <Stop offset="1" stopColor={colors.emberDeep} stopOpacity="0" />
-          </LinearGradient>
-          <LinearGradient id={`fig${u}`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#000" stopOpacity="0.55" />
-            <Stop offset="1" stopColor="#000" stopOpacity="0" />
+        </Defs>
+        <Rect x="0" y="0" width={w} height={height} fill={`url(#cool${u})`} />
+        <Rect x="0" y="0" width={w} height={height} fill={`url(#rim${u})`} opacity={figure ? 1 : 0.7} />
+      </Svg>
+      {figure && (
+        <Image source={FIGURE} style={{ position: 'absolute', left: -w * 0.08, top: -10, width: w * 0.72, height: Math.min(height, w * 0.82) }} contentFit="cover" accessibilityIgnoresInvertColors />
+      )}
+      {/* bottom fade into the content */}
+      <Svg width={w} height={height} style={StyleSheet.absoluteFill}>
+        <Defs>
+          <LinearGradient id={`fade${u}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0.55" stopColor={colors.bg} stopOpacity="0" />
+            <Stop offset="1" stopColor={colors.bg} stopOpacity="0.9" />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width={w} height={height} fill={colors.bg} />
-        <Rect x="0" y="0" width={w} height={height} fill={`url(#corner${u})`} />
-        <Rect x="0" y="0" width={w} height={height} fill={`url(#center${u})`} />
-        {/* light streaks sweeping from the top corner */}
-        <Path d={`M ${w * 0.55} ${-10} C ${w * 0.85} ${height * 0.2}, ${w * 0.95} ${height * 0.45}, ${w * 0.78} ${height * 0.75}`} stroke={`url(#streak${u})`} strokeWidth={26} fill="none" opacity={0.35} />
-        <Path d={`M ${w * 0.7} ${-10} C ${w * 0.98} ${height * 0.18}, ${w * 1.05} ${height * 0.4}, ${w * 0.92} ${height * 0.62}`} stroke={`url(#streak${u})`} strokeWidth={6} fill="none" opacity={0.6} />
-        <Path d={`M ${w * 0.62} ${-10} C ${w * 0.9} ${height * 0.22}, ${w * 1.0} ${height * 0.5}, ${w * 0.84} ${height * 0.7}`} stroke={colors.accentLight} strokeWidth={1.2} fill="none" opacity={0.35} />
-        {figure && (
-          <G opacity={0.5}>
-            {/* soft, out-of-focus silhouette built from layered translucent shapes */}
-            {[0, 1, 2].map((i) => (
-              <G key={i} opacity={0.35 - i * 0.08}>
-                <Ellipse cx={w * 0.5} cy={height * 0.17} rx={22 + i * 6} ry={26 + i * 6} fill={`url(#fig${u})`} />
-                <Path
-                  d={`M ${w * 0.5 - 40 - i * 6} ${height * 0.62} C ${w * 0.5 - 48 - i * 6} ${height * 0.42}, ${w * 0.5 - 30} ${height * 0.27}, ${w * 0.5} ${height * 0.26} C ${w * 0.5 + 30} ${height * 0.27}, ${w * 0.5 + 48 + i * 6} ${height * 0.42}, ${w * 0.5 + 40 + i * 6} ${height * 0.62} Z`}
-                  fill={`url(#fig${u})`}
-                />
-              </G>
-            ))}
-          </G>
-        )}
+        <Rect x="0" y="0" width={w} height={height} fill={`url(#fade${u})`} />
       </Svg>
     </View>
   );
 }
+
+const FIGURE = require('../../assets/brand/figure-blur.png');
 
 /** Thin vertical measurement rulers on both screen edges. */
 export function SideRulers({ top, height }: { top: number; height: number }) {
@@ -183,7 +170,7 @@ export function WaveHeader({ progress = 0, height = 96 }: { progress?: number; h
             <Stop offset="1" stopColor={colors.accent} stopOpacity="0" />
           </LinearGradient>
           <LinearGradient id={`panel${u}`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#24140B" stopOpacity="1" />
+            <Stop offset="0" stopColor="#1C1D20" stopOpacity="1" />
             <Stop offset="1" stopColor={colors.surface} stopOpacity="1" />
           </LinearGradient>
         </Defs>
@@ -230,9 +217,9 @@ export function SplashArt({ width, height }: { width: number; height: number }) 
             <Stop offset="1" stopColor="#3A1002" />
           </RadialGradient>
           <RadialGradient id={`fg${u}`} cx="0.5" cy="0.5" r="0.5">
-            <Stop offset="0" stopColor="#120602" stopOpacity="0.85" />
-            <Stop offset="0.7" stopColor="#120602" stopOpacity="0.35" />
-            <Stop offset="1" stopColor="#120602" stopOpacity="0" />
+            <Stop offset="0" stopColor="#131416" stopOpacity="0.85" />
+            <Stop offset="0.7" stopColor="#131416" stopOpacity="0.35" />
+            <Stop offset="1" stopColor="#131416" stopOpacity="0" />
           </RadialGradient>
         </Defs>
         <Rect x="0" y="0" width={width} height={height} fill={`url(#sp${u})`} />

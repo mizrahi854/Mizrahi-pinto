@@ -288,11 +288,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: radius.lg, backgroundColor: light.card },
   rowImg: { width: 64, height: 64, borderRadius: 14, overflow: 'hidden' },
   basketWrap: { position: 'absolute', left: space.md, right: space.md },
-  basketBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, height: 64, borderRadius: 22, backgroundColor: '#140C08', borderWidth: 1, borderColor: 'rgba(255,170,110,0.35)' },
+  basketBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, height: 64, borderRadius: 22, backgroundColor: '#140C08', borderWidth: 1, borderColor: 'rgba(245,121,37,0.35)' },
   basketCount: { width: 34, height: 34, borderRadius: 17, backgroundColor: light.accent, alignItems: 'center', justifyContent: 'center' },
   basketCountText: { fontFamily: fonts.bold, fontSize: 15, color: '#fff' },
   basketTitle: { fontFamily: fonts.semibold, fontSize: 15, color: '#fff' },
   basketSub: { fontFamily: fonts.regular, fontSize: 12.5, color: 'rgba(255,255,255,0.75)' },
   basketCta: { fontFamily: fonts.semibold, fontSize: 15, color: '#F2A05C' },
-  link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(242,107,29,0.35)' },
+  link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(245,121,37,0.35)' },
 });

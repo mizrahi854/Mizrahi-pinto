@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { goBack } from '@/lib/nav';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Wheel } from '@/components/WheelPicker';
+import { Bar, OrangeButton } from '@/components/glass';
+import { MUSCLE_TILE } from '@/data/media';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInLeft, FadeOutRight, FadeIn, ZoomIn, useReducedMotion } from 'react-native-reanimated';
@@ -11,7 +16,7 @@ import { Icon, IconName } from '@/components/Icon';
 import { RulerPicker } from '@/components/RulerPicker';
 import { DotNumber } from '@/components/DotMatrix';
 import { LogoMark, MAX_W } from '@/components/Brand';
-import { colors, space, type, radius } from '@/theme/tokens';
+import { colors, space, type, radius, fonts } from '@/theme/tokens';
 import { DAY_SHORT, DAY_LONG, uid } from '@/lib/dates';
 import { ACTIVITY_FACTORS, estimateMaintenance, defaultMacros, isAdult } from '@/lib/nutrition';
 import { haptic } from '@/lib/haptics';
@@ -28,14 +33,15 @@ const GOALS: { id: string; label: string; icon: IconName }[] = [
 ];
 const HABITS = ['ארוחת בוקר קבועה', 'מדלג/ת על ארוחות', 'אוכל/ת מאוחר בערב', 'נשנושים בין הארוחות', 'אוכל/ת בחוץ הרבה', 'מבשל/ת בבית', 'ארוחות לא קבועות'];
 const ROUTINE: [Profile['experience'], string, string][] = [['advanced', 'מתאמן/ת באופן קבוע', 'יודע/ת מה לעשות באימון'], ['intermediate', 'חוזר/ת לשגרה', 'מתאמן/ת לסירוגין'], ['beginner', 'מתחיל/ה עכשיו', 'בונה שגרה מאפס']];
-const MUSCLES: MuscleGroup[] = ['chest', 'back', 'shoulders', 'legs', 'biceps', 'triceps', 'abs', 'cardio', 'full'];
+const AGES = Array.from({ length: 81 }, (_, k) => k + 10);
+const MUSCLE_TILES: [string, string, MuscleGroup[]][] = [['chest', 'חזה', ['chest']], ['back', 'גב', ['back']], ['shoulders', 'כתפיים', ['shoulders']], ['arms', 'ידיים', ['biceps', 'triceps']], ['legs', 'רגליים', ['legs', 'glutes']], ['abs', 'בטן', ['abs']]];
 const WEEKEND = ['ארוחת שישי משפחתית', 'אימון בשישי בבוקר', 'שבת של מנוחה', 'בילוי/יציאות בסוף השבוע', 'עבודה או לימודים בשישי', 'ארוחות אצל המשפחה'];
 const RESTAURANT_FREQ: [NonNullable<Profile['restaurantFreq']>, string][] = [['rare', 'כמעט אף פעם'], ['monthly', 'פעם-פעמיים בחודש'], ['weekly', 'כל שבוע'], ['often', 'כמה פעמים בשבוע']];
 const NOTIFS: [string, string][] = [['workout', 'תזכורת לאימון הבא'], ['daily', 'תזכורת יומית'], ['did_train', '״התאמנת היום?״'], ['plan_week', 'תכנון השבוע (מוצ״ש)'], ['shabbat_prep', 'הכנת תוכנית שבת (חמישי)'], ['meal', 'תיעוד ארוחות'], ['restaurant', 'לפני יציאה למסעדה']];
 const PREFS = ['הכל', 'צמחוני', 'טבעוני', 'כשר', 'ללא גלוטן', 'דל לקטוז', 'עתיר חלבון', 'ארוחות מהירות'];
 const ALLERGIES = ['חלב', 'ביצים', 'בוטנים', 'אגוזים', 'שומשום', 'סויה', 'דגים', 'גלוטן'];
 
-type Step = 'name' | 'goals' | 'eating' | 'training' | 'routine' | 'weekend' | 'notifs' | 'tracking' | 'metrics' | 'target' | 'building' | 'summary' | 'premium';
+type Step = 'name' | 'age' | 'goals' | 'eating' | 'training' | 'muscles' | 'days' | 'routine' | 'weekend' | 'notifs' | 'tracking' | 'metrics' | 'target' | 'building' | 'summary' | 'premium';
 
 /** Personalisation questionnaire (one topic per screen, autosaves a draft). Ends with a plan preview + Premium offer. */
 export default function Onboarding() {
@@ -53,7 +59,7 @@ export default function Onboarding() {
   const [p, setP] = useState<Profile>(() => ({ ...defaultProfile, ...(editing ? existing : {}), ...(editing ? {} : draft) }) as Profile);
   const adult = isAdult(p.age);
   const steps: Step[] = useMemo(
-    () => ['name', 'goals', 'eating', 'training', 'routine', 'weekend', 'notifs', ...(adult ? (['tracking'] as Step[]) : []), ...(adult && p.trackCalories ? (['metrics', 'target'] as Step[]) : []), 'building', 'summary', ...(editing ? [] : (['premium'] as Step[]))],
+    () => ['name', 'age', 'goals', 'eating', 'training', 'muscles', 'days', 'routine', 'weekend', 'notifs', ...(adult ? (['tracking'] as Step[]) : []), ...(adult && p.trackCalories ? (['metrics', 'target'] as Step[]) : []), 'building', 'summary', ...(editing ? [] : (['premium'] as Step[]))],
     [adult, editing, p.trackCalories],
   );
   const [i, setI] = useState(() => Math.min(editing ? 0 : draft.step ?? 0, steps.length - 1));
@@ -68,9 +74,10 @@ export default function Onboarding() {
 
   const canNext = (() => {
     switch (step) {
-      case 'name': return p.name.trim().length >= 2 && p.age != null && p.age >= 10 && p.age <= 100;
+      case 'name': return p.name.trim().length >= 2;
+      case 'age': return p.age != null && p.age >= 10 && p.age <= 100;
       case 'goals': return p.goals.length > 0;
-      case 'training': return p.trainingDays.length > 0;
+      case 'days': return p.trainingDays.length > 0;
       default: return true;
     }
   })();
@@ -139,22 +146,34 @@ export default function Onboarding() {
   return (
     <View style={styles.root}>
       <View style={[styles.inner, { paddingTop: insets.top + 8 }]}>
+        <LinearGradient colors={['#1D222A', '#15171A', '#131416']} style={StyleSheet.absoluteFill} />
+        <View style={styles.glowA} pointerEvents="none" />
+        <View style={styles.glowB} pointerEvents="none" />
         <View style={styles.topBar}>
-          <IconButton icon="chevronBack" label="חזרה" onPress={back} size={40} />
-          <View style={{ flex: 1, marginHorizontal: 12 }}>
-            <ProgressBar value={progress} />
-          </View>
-          <Text style={[type.caption, { color: colors.text2, minWidth: 34, textAlign: 'center' }]}>{i + 1}/{steps.length}</Text>
+          <Text style={styles.stepText}>שלב {i + 1} מתוך {steps.length}</Text>
+          <View style={{ flex: 1 }} />
+          <Tap onPress={back} label="חזרה"><View style={styles.topBack}><Icon name="chevron" size={22} color={colors.text} /></View></Tap>
         </View>
+        <View style={{ paddingHorizontal: space.md }}><Bar value={progress} height={5} /></View>
         <ScrollView contentContainerStyle={{ padding: space.md, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
           <Animated.View key={step} entering={reduce ? undefined : FadeInLeft.duration(320)} exiting={reduce ? undefined : FadeOutRight.duration(200)}>
             {step === 'name' && (
               <>
-                <Q title="איך קוראים לך?" sub="נשתמש בשם לברכה האישית." />
-                <Field label="שם פרטי" value={p.name} onChangeText={(name) => set({ name })} autoComplete="given-name" placeholder="למשל: אלירן" />
-                <Q title="בן/בת כמה את/ה?" sub="הגיל קובע אילו כלים יוצגו. מתחת לגיל 18 לא מוצגים יעדי קלוריות." small />
-                <RulerPicker min={10} max={90} value={p.age ?? 25} onChange={(age) => set({ age })} unit="שנים" label="גיל" />
-                {p.age == null && <T.Caption style={{ textAlign: 'center', marginTop: 8 }}>גרור את הסרגל או הקלד את הגיל</T.Caption>}
+                <Q title="איך קוראים לך?" />
+                <View style={styles.nameField}>
+                  <Icon name="user" size={24} color={colors.text2} />
+                  <TextInput value={p.name} onChangeText={(name) => set({ name })} autoComplete="given-name" placeholder="השם שלך" placeholderTextColor={colors.text3} style={styles.nameInput} accessibilityLabel="שם פרטי" autoFocus returnKeyType="next" onSubmitEditing={next} />
+                </View>
+                <T.Caption style={{ textAlign: 'center', marginTop: 10 }}>נשתמש בשם לברכה האישית.</T.Caption>
+              </>
+            )}
+            {step === 'age' && (
+              <>
+                <Q title="בן/בת כמה את/ה?" />
+                <View style={{ marginTop: space.md }}>
+                  <Wheel wide values={AGES} value={p.age ?? 25} onChange={(age) => set({ age })} label="גיל" />
+                </View>
+                <T.Caption style={{ textAlign: 'center', marginTop: 14 }}>הגיל קובע אילו כלים יוצגו. מתחת לגיל 18 לא מוצגים יעדי קלוריות או הגבלה.</T.Caption>
               </>
             )}
             {step === 'goals' && (
@@ -177,11 +196,38 @@ export default function Onboarding() {
             )}
             {step === 'training' && (
               <>
-                <Q title="שגרת האימונים שלך" />
-                {ROUTINE.map(([id, l, d]) => <Option key={id} icon="bolt" label={l} desc={d} selected={p.experience === id} onPress={() => set({ experience: id })} radio />)}
-                <Q title="אילו קבוצות שרירים אתה מאמן?" sub="נבנה מהן חלוקה שבועית (למשל חזה ויד קדמית / גב ויד אחורית)." small />
-                <View style={styles.wrapRow}>{MUSCLES.map((m) => <Chip key={m} label={MUSCLE_LABELS[m]} active={(p.muscleGroups ?? []).includes(m)} onPress={() => set({ muscleGroups: toggle(p.muscleGroups ?? [], m) })} />)}</View>
-                <Q title="ימי אימון" sub={`נבחרו ${p.trainingDays.length} אימונים בשבוע`} small />
+                <Q title="איך נראית שגרת האימון שלך?" />
+                {ROUTINE.map(([id, l, d], k) => <Option key={id} icon={(['dumbbell', 'calendar', 'moon'] as IconName[])[k]!} label={l} desc={d} selected={p.experience === id} onPress={() => set({ experience: id })} radio />)}
+              </>
+            )}
+            {step === 'muscles' && (
+              <>
+                <Q title="באילו קבוצות שרירים אתה מתאמן?" sub="נבנה מהן חלוקה שבועית. אפשר לבחור כמה." />
+                <View style={styles.tiles}>
+                  {MUSCLE_TILES.map(([key, label, groups]) => {
+                    const on = groups.every((g) => (p.muscleGroups ?? []).includes(g));
+                    return (
+                      <Tap key={key} onPress={() => set({ muscleGroups: on ? (p.muscleGroups ?? []).filter((g) => !groups.includes(g)) : [...new Set([...(p.muscleGroups ?? []), ...groups])] })} label={label} role="checkbox" style={styles.tileWrap}>
+                        <View style={[styles.tile, on && styles.tileOn]}>
+                          <Image source={MUSCLE_TILE[key]} style={styles.tileImg} contentFit="cover" accessibilityIgnoresInvertColors />
+                          {on && <View style={styles.tileTint} pointerEvents="none" />}
+                          <View style={styles.tileFoot}>
+                            <Text style={styles.tileText}>{label}</Text>
+                            <View style={[styles.check, on && styles.checkOn]}>{on && <Icon name="check" size={13} color={colors.textOnAccent} strokeWidth={2.6} />}</View>
+                          </View>
+                        </View>
+                      </Tap>
+                    );
+                  })}
+                </View>
+                <View style={[styles.wrapRow, { marginTop: 12 }]}>
+                  {(['cardio', 'full'] as MuscleGroup[]).map((m) => <Chip key={m} label={MUSCLE_LABELS[m]} active={(p.muscleGroups ?? []).includes(m)} onPress={() => set({ muscleGroups: toggle(p.muscleGroups ?? [], m) })} />)}
+                </View>
+              </>
+            )}
+            {step === 'days' && (
+              <>
+                <Q title="באילו ימים ושעות?" sub={`נבחרו ${p.trainingDays.length} אימונים בשבוע`} />
                 <View style={styles.days}>
                   {DAY_SHORT.map((d, idx) => (
                     <Tap key={d} onPress={() => set({ trainingDays: toggle(p.trainingDays, idx).sort() })} label={`יום ${DAY_LONG[idx]}`} role="checkbox">
@@ -283,17 +329,21 @@ export default function Onboarding() {
             )}
           </Animated.View>
         </ScrollView>
-        {step !== 'building' && (
+        {step !== 'building' && (<>
           <View style={[styles.footer, { paddingBottom: insets.bottom + 14 }]}>
-            {step === 'summary' && !editing ? (
-              <Button title="המשך" icon="chevron" onPress={next} />
-            ) : step === 'premium' || (step === 'summary' && editing) ? (
-              <Button title={editing ? 'שמירת שינויים' : 'המשך בחינם'} onPress={finish} />
-            ) : (
-              <Button title="המשך" onPress={next} disabled={!canNext} />
-            )}
+            <View style={{ flex: 1, opacity: canNext ? 1 : 0.5 }}>
+              {step === 'summary' && !editing ? (
+                <OrangeButton title="התחל את המסע" icon="chevronBack" onPress={next} />
+              ) : step === 'premium' || (step === 'summary' && editing) ? (
+                <OrangeButton title={editing ? 'שמירת שינויים' : 'המשך בחינם'} onPress={finish} />
+              ) : (
+                <OrangeButton title="המשך" icon="chevronBack" onPress={next} />
+              )}
+            </View>
+            {step !== 'summary' && step !== 'premium' && <Tap onPress={back} label="חזרה"><View style={styles.roundBack}><Icon name="chevron" size={22} color={colors.text} /></View></Tap>}
           </View>
-        )}
+          {step === 'summary' && !editing && <Tap onPress={() => setI(0)} label="עריכת התוכנית"><Text style={[styles.editLink, { bottom: insets.bottom + 2 }]}>עריכת תוכנית</Text></Tap>}
+        </>)}
       </View>
     </View>
   );
@@ -314,12 +364,13 @@ function Option({ icon, label, desc, selected, onPress, radio }: { icon: IconNam
   return (
     <Tap onPress={onPress} label={label} role={radio ? 'radio' : 'checkbox'}>
       <View style={[styles.option, selected && styles.optionOn]}>
-        <View style={styles.optIcon}><Icon name={icon} size={20} /></View>
+        {selected && <LinearGradient colors={['#E8691F', '#B84A0C']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />}
+        <View style={[styles.optIcon, selected && { backgroundColor: 'rgba(255,255,255,0.18)' }]}><Icon name={icon} size={22} color={selected ? '#fff' : colors.accent} /></View>
         <View style={{ flex: 1 }}>
-          <Text style={[type.bodyMedium, { color: colors.text }]}>{label}</Text>
-          {desc && <Text style={[type.caption, { color: colors.text2, marginTop: 2 }]}>{desc}</Text>}
+          <Text style={[type.bodyMedium, { color: '#fff', fontFamily: fonts.semibold }]}>{label}</Text>
+          {desc && <Text style={[type.caption, { color: selected ? 'rgba(255,255,255,0.92)' : colors.text2, marginTop: 2 }]}>{desc}</Text>}
         </View>
-        <View style={[styles.check, selected && styles.checkOn]}>{selected && <Icon name="check" size={14} color={colors.textOnAccent} strokeWidth={2.4} />}</View>
+        <View style={[styles.check, selected && { backgroundColor: '#fff', borderColor: '#fff' }]}>{selected && <Icon name="check" size={14} color="#B84A0C" strokeWidth={2.6} />}</View>
       </View>
     </Tap>
   );
@@ -351,42 +402,61 @@ function Building() {
 function Summary({ p }: { p: Profile }) {
   const tmpl = buildTemplate(p.trainingDays, p.muscleGroups ?? [], p.trainingTime || null);
   const calories = isAdult(p.age) && !!p.trackCalories;
+  const freq: Record<string, string> = { rare: 'כמעט אף פעם', monthly: 'פעם-פעמיים בחודש', weekly: 'פעם בשבוע', often: 'כמה פעמים בשבוע' };
+  const rows: [IconName, string, string][] = [
+    ['dumbbell', 'אימונים', `${p.trainingDays.length} פעמים בשבוע${p.trainingTime ? ` · ${p.trainingTime}` : ''}`],
+    ['calendar', 'חלוקה', tmpl.filter((x) => !x.rest).map((x) => x.name).filter((v, i, arr) => arr.indexOf(v) === i).join(' / ') || 'גוף מלא'],
+    ['food', 'תזונה', calories ? (p.calorieTarget ? `${p.calorieTarget.toLocaleString()} קלוריות ליום` : 'מעקב קלוריות') : 'יומן ארוחות והרגלים'],
+    ['star', 'שישי-שבת', (p.shabbatMeals ?? []).length ? SHABBAT_MEALS.filter((m) => p.shabbatMeals!.includes(m.key)).map((m) => m.label.replace('ארוחת ', '')).join(' · ') : 'ללא תוכנית מיוחדת'],
+    ['cloche', 'מסעדות', p.restaurantFreq ? freq[p.restaurantFreq]! : 'לפי הצורך'],
+    ['bell', 'תזכורות', (p.notifPrefs ?? []).length ? `${(p.notifPrefs ?? []).length} תזכורות${p.wakeTime ? ` · קימה ${p.wakeTime}` : ''}` : 'ללא'],
+  ];
   return (
-    <>
-      <Q title={`${p.name || 'התוכנית שלך'}, זו התוכנית הראשונית`} sub="תצוגה מקדימה – הכל ניתן לעריכה מהתוכנית השבועית ומהפרופיל." />
-      <Card style={{ gap: 10 }}>
-        <T.H>שבוע אימונים</T.H>
-        {tmpl.map((t) => (
-          <Row key={t.day} style={{ justifyContent: 'space-between' }}>
-            <T.Body>{DAY_LONG[t.day]}</T.Body>
-            <T.Muted style={{ color: t.rest ? colors.text3 : colors.accentLight }}>{t.rest ? 'מנוחה' : `${t.name}${t.time ? ` · ${t.time}` : ''}`}</T.Muted>
-          </Row>
+    <View style={{ alignItems: 'center' }}>
+      <View style={styles.badge}><Icon name="flag" size={30} color="#fff" strokeWidth={2} /></View>
+      <Text style={[type.hero, { color: colors.text, textAlign: 'center', marginTop: 14 }]} accessibilityRole="header">{p.name ? `${p.name}, ` : ''}התוכנית האישית שלך</Text>
+      <T.Muted style={{ textAlign: 'center', marginTop: 6 }}>בנינו עבורך תוכנית מותאמת למטרות, לאורח החיים ולהעדפות שלך. הכל ניתן לעריכה.</T.Muted>
+      <View style={styles.sumCard}>
+        {rows.map(([ic, l, v], k) => (
+          <View key={l} style={[styles.sumRow, k > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.12)' }]} accessible accessibilityLabel={`${l}: ${v}`}>
+            <Icon name={ic} size={22} color={colors.text2} />
+            <Text style={styles.sumL}>{l}:</Text>
+            <Text style={styles.sumV} numberOfLines={2}>{v}</Text>
+          </View>
         ))}
-      </Card>
-      <Card style={{ marginTop: space.md, gap: 6 }}>
-        <T.H>תזונה</T.H>
-        <T.Muted>{calories ? (p.calorieTarget ? `מעקב קלוריות · יעד יומי ${p.calorieTarget.toLocaleString()} קק״ל · חלבון ${p.proteinTarget} ג׳` : 'מעקב קלוריות ללא יעד') : 'יומן ארוחות והרגלים, בלי מספרים.'}</T.Muted>
-        {p.allergies.length > 0 && <T.Muted>רגישויות: {p.allergies.join(', ')}</T.Muted>}
-      </Card>
-      <Card style={{ marginTop: space.md, gap: 6 }}>
-        <T.H>שישי ושבת</T.H>
-        <T.Muted>{(p.shabbatMeals ?? []).length ? SHABBAT_MEALS.filter((m) => p.shabbatMeals!.includes(m.key)).map((m) => m.label).join(' · ') : 'ללא ארוחות קבועות'}</T.Muted>
-      </Card>
-      <Card style={{ marginTop: space.md, gap: 6 }}>
-        <T.H>תזכורות</T.H>
-        <T.Muted>{(p.notifPrefs ?? []).length ? NOTIFS.filter(([k]) => p.notifPrefs!.includes(k)).map(([, l]) => l).join(' · ') : 'ללא תזכורות'}{p.wakeTime ? ` · קימה ${p.wakeTime}` : ''}</T.Muted>
-      </Card>
-    </>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgDeep, alignItems: 'center' },
-  inner: { flex: 1, width: '100%', maxWidth: MAX_W, backgroundColor: colors.bg },
-  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, paddingBottom: 8 },
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: space.md, paddingTop: 12, backgroundColor: 'rgba(11,7,5,0.95)' },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.glass, marginBottom: 10, minHeight: 60 },
-  optionOn: { borderColor: colors.accent, backgroundColor: 'rgba(232,120,42,0.10)' },
+  inner: { flex: 1, width: '100%', maxWidth: MAX_W, backgroundColor: colors.bg, overflow: 'hidden' },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, paddingBottom: 10 },
+  stepText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text2 },
+  topBack: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  roundBack: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(48,50,54,0.7)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' },
+  editLink: { position: 'absolute', alignSelf: 'center', fontFamily: fonts.medium, fontSize: 14, color: colors.text2, textDecorationLine: 'underline', padding: 10 },
+  glowA: { position: 'absolute', bottom: -120, right: -100, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(245,121,37,0.16)', ...({ filter: 'blur(60px)' } as any) },
+  glowB: { position: 'absolute', top: -80, left: -120, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(90,110,140,0.18)', ...({ filter: 'blur(60px)' } as any) },
+  nameField: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, borderRadius: 22, paddingHorizontal: 18, backgroundColor: 'rgba(48,50,54,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  nameInput: { flex: 1, fontFamily: fonts.semibold, fontSize: 20, color: colors.text, textAlign: 'right', outlineStyle: 'none' } as any,
+  badge: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.accentButton, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,190,150,0.5)', marginTop: space.lg },
+  sumCard: { alignSelf: 'stretch', marginTop: space.lg, borderRadius: 24, paddingHorizontal: 16, backgroundColor: 'rgba(48,50,54,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  sumRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 54 },
+  sumL: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
+  sumV: { flex: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.text2 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
+  tileWrap: { width: '33.333%', padding: 5 },
+  tile: { borderRadius: 18, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(48,50,54,0.5)' },
+  tileOn: { borderColor: colors.accent },
+  tileTint: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 36, backgroundColor: 'rgba(245,121,37,0.42)', ...({ mixBlendMode: 'color' } as any) },
+  tileImg: { width: '100%', aspectRatio: 1.15 },
+  tileFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, minHeight: 36 },
+  tileText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: space.md, paddingTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(48,50,54,0.5)', marginBottom: 10, minHeight: 64, overflow: 'hidden' },
+  optionOn: { borderColor: 'rgba(255,170,110,0.7)' },
   optIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },

@@ -6,8 +6,14 @@ import { LightScreen, LIconButton, LCard, ls } from '@/components/light';
 import { Tap, Sheet, toast, Field, Button } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { CalendarSheet } from '@/components/DiaryParts';
+import { DotNumber } from '@/components/DotMatrix';
+import { ProgressRing } from '@/components/glass';
+import { MEAL_PHOTO } from '@/data/media';
+import { useWeek } from '@/store/selectors';
+import { colors } from '@/theme/tokens';
 import { useApp } from '@/store/useApp';
 import { useDay, useMeals } from '@/store/selectors';
+import { Segmented } from '@/components/light';
 import { addDays, dateKey, prettyDate, weekOf, DAY_SHORT, parseKey } from '@/lib/dates';
 import { fmt } from '@/lib/nutrition';
 import { totalsOf } from '@/lib/engine';
@@ -31,12 +37,14 @@ export default function Diary() {
   const setLogCtx = useApp((s) => s.setLogCtx);
   const eatPlanned = useApp((s) => s.eatPlannedMeal);
   const [calendar, setCalendar] = useState(false);
+  const [mode, setMode] = useState<'day' | 'week'>('day');
+  const week = useWeek(date);
   const [newMeal, setNewMeal] = useState(false);
   const [mealName, setMealName] = useState('');
   const t = day.totals;
   const today = dateKey();
   const future = date > today;
-  const week = weekOf(date);
+  const weekDates = weekOf(date);
   const loggedDates = useMemo(() => new Set(entries.map((e) => e.date)), [entries]);
   const target = day.target.calorieTarget;
 
@@ -52,35 +60,34 @@ export default function Diary() {
       back={false}
       tabBar
       right={<LIconButton icon="calendar" label="פתיחת לוח שנה" onPress={() => setCalendar(true)} />}
-      heroHeight={day.calories ? 150 : 112}
+      heroHeight={mode === 'day' ? 250 : 136}
       hero={
         <View style={{ gap: 12 }}>
+          <View style={{ paddingHorizontal: 24 }}><Segmented value={mode} onChange={setMode} options={[{ key: 'day', label: 'יום' }, { key: 'week', label: 'שבוע' }]} /></View>
           <View style={styles.week}>
             <Tap onPress={() => setDate(addDays(date, -1))} label="יום קודם"><View style={styles.weekArrow}><Icon name="chevronBack" size={20} color="#fff" /></View></Tap>
-            {week.map((d, i) => {
+            {weekDates.map((d, i) => {
               const on = d === date;
               return (
                 <Pressable key={d} onPress={() => { haptic.select(); setDate(d); }} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={`${prettyDate(d)}${loggedDates.has(d) ? ', יש רישומים' : ''}`} style={[styles.wd, on && styles.wdOn, d === today && !on && styles.wdToday]}>
-                  <Text style={[styles.wdDay, on && { color: '#1A0C04' }]}>{DAY_SHORT[i]}</Text>
-                  <Text style={[styles.wdNum, on && { color: '#1A0C04' }]}>{parseKey(d).getDate()}</Text>
-                  <View style={[styles.dot, { opacity: loggedDates.has(d) ? 1 : 0 }, on && { backgroundColor: '#1A0C04' }]} />
+                  <Text style={[styles.wdDay, on && { color: '#131416' }]}>{DAY_SHORT[i]}</Text>
+                  <Text style={[styles.wdNum, on && { color: '#131416' }]}>{parseKey(d).getDate()}</Text>
+                  <View style={[styles.dot, { opacity: loggedDates.has(d) ? 1 : 0 }, on && { backgroundColor: '#131416' }]} />
                 </Pressable>
               );
             })}
             <Tap onPress={() => setDate(addDays(date, 1))} label="יום הבא"><View style={styles.weekArrow}><Icon name="chevron" size={20} color="#fff" /></View></Tap>
           </View>
-          {day.calories ? (
-            <View style={styles.summary} accessible accessibilityLabel={`סיכום היום: ${t.kcal} קלוריות${target ? ` מתוך ${target}` : ''}, חלבון ${fmt(t.protein)} גרם, פחמימות ${fmt(t.carbs)} גרם, שומן ${fmt(t.fat)} גרם`}>
-              <Sum v={`${t.kcal.toLocaleString()}${t.partial.kcal ? '*' : ''}`} l={target ? `מתוך ${target.toLocaleString()} קק״ל` : 'קק״ל'} big />
-              <Sum v={fmt(t.protein)} l="חלבון" />
-              <Sum v={fmt(t.carbs)} l="פחמימות" />
-              <Sum v={fmt(t.fat)} l="שומן" />
-            </View>
-          ) : (
-            <View style={styles.summary} accessible accessibilityLabel={`${day.mealsLogged} ארוחות תועדו, ${day.list.length} פריטים`}>
-              <Sum v={String(day.mealsLogged)} l="ארוחות תועדו" big />
-              <Sum v={String(day.list.length)} l="פריטים" />
-              <Sum v={String(day.planned.filter((p) => !p.eatenAt).length)} l="מתוכננות" />
+          {mode === 'day' && (
+            <View style={styles.summary} accessible accessibilityLabel={day.calories ? `סיכום היום: ${t.kcal} קלוריות${target ? ` מתוך ${target}` : ''}, חלבון ${fmt(t.protein)} גרם, פחמימות ${fmt(t.carbs)} גרם, שומן ${fmt(t.fat)} גרם` : `${day.mealsLogged} ארוחות תועדו, ${day.list.length} פריטים`}>
+              <ProgressRing value={day.hasTarget ? t.kcal / target! : day.mealsLogged / 4} size={88} stroke={8}>
+                <Text style={styles.ringV}>{day.calories ? `${Math.round((day.hasTarget ? t.kcal / target! : 0) * 100)}%` : `${day.mealsLogged}/4`}</Text>
+              </ProgressRing>
+              <View style={{ flex: 1, alignItems: 'flex-start', gap: 2 }}>
+                <Text style={styles.sumL}>{day.hasTarget ? (day.remaining! >= 0 ? 'יתרת קלוריות להיום' : 'מעל היעד היום') : day.calories ? 'קלוריות שתועדו' : 'ארוחות שתועדו'}</Text>
+                <DotNumber value={day.hasTarget ? Math.abs(day.remaining!) : day.calories ? t.kcal : day.mealsLogged} dot={4.2} gap={2} />
+                <Text style={styles.sumL}>{day.calories ? `נאכלו ${t.kcal.toLocaleString()}${t.partial.kcal ? '*' : ''}${target ? ` מתוך ${target.toLocaleString()}` : ''} · ח׳ ${fmt(t.protein)} · פ׳ ${fmt(t.carbs)} · ש׳ ${fmt(t.fat)}` : `${day.list.length} פריטים · ${day.planned.filter((p) => !p.eatenAt).length} מתוכננות`}</Text>
+              </View>
             </View>
           )}
         </View>
@@ -90,6 +97,27 @@ export default function Diary() {
         <Tap onPress={() => setDate(today)} label="חזרה להיום"><View style={styles.today}><Icon name="calendar" size={16} color={light.accent} /><Text style={styles.todayText}>חזרה להיום</Text></View></Tap>
       )}
 
+      {mode === 'week' && (
+        <View style={{ gap: 8, marginBottom: space.lg }}>
+          {week.days.map((d) => {
+            const dt = parseKey(d.date);
+            return (
+              <Tap key={d.date} onPress={() => { setDate(d.date); setMode('day'); }} label={`${prettyDate(d.date)}: ${d.logged ? (week.calories ? `${d.totals.kcal} קלוריות` : `${d.meals} ארוחות`) : 'ללא תיעוד'}`}>
+                <View style={[styles.weekRow, d.date === date && { borderColor: light.accent, borderWidth: 1.5 }]}>
+                  <View style={{ width: 64 }}><Text style={styles.mealName}>{DAY_SHORT[dt.getDay()]} {dt.getDate()}</Text></View>
+                  <View style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: light.track, overflow: 'hidden', flexDirection: 'row-reverse' }}>
+                    <View style={{ width: `${Math.min(100, week.calories && d.target ? (d.totals.kcal / d.target) * 100 : (d.meals / 4) * 100)}%`, backgroundColor: light.accent, borderRadius: 4 }} />
+                  </View>
+                  <Text style={[ls.bodyStrong, { width: 90, textAlign: 'left' }]}>{d.logged ? (week.calories ? `${d.totals.kcal.toLocaleString()}` : `${d.meals} ארוחות`) : '—'}</Text>
+                </View>
+              </Tap>
+            );
+          })}
+          {week.calories && <Text style={[ls.muted, { textAlign: 'center' }]}>ממוצע {week.avgKcal?.toLocaleString() ?? '—'} קק״ל לימים שתועדו · {week.loggedCount}/7 ימים</Text>}
+        </View>
+      )}
+
+      {mode === 'day' && (<>
       {/* two big primary actions */}
       <View style={styles.actions}>
         <Tap onPress={() => (future ? router.push({ pathname: '/plan-meal', params: { date } }) : addMeal())} label={future ? 'תכנון ארוחה ליום זה' : 'הוסף ארוחה'} style={{ flex: 1 }}>
@@ -133,19 +161,20 @@ export default function Diary() {
                 accessibilityLabel={`${label}${list.length ? `, ${list.length} פריטים${time ? `, בשעה ${time}` : ''}${day.calories ? `, ${sum.kcal} קלוריות` : ''}. לעריכה` : ', טרם תועד. להוספה'}`}
                 style={styles.mealHead}
               >
-                {photo ? <Image source={{ uri: photo }} style={styles.mealPhoto} contentFit="cover" accessibilityIgnoresInvertColors /> : <View style={styles.mealIcon}><Icon name={m.icon} size={22} color={light.accent} /></View>}
+                {photo ? <Image source={{ uri: photo }} style={styles.mealPhoto} contentFit="cover" accessibilityIgnoresInvertColors /> : MEAL_PHOTO[m.key] ? <Image source={MEAL_PHOTO[m.key]} style={[styles.mealPhoto, !list.length && { opacity: 0.45 }]} contentFit="cover" accessibilityIgnoresInvertColors /> : <View style={styles.mealIcon}><Icon name={m.icon} size={22} color={light.accent} /></View>}
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={styles.mealName}>{label}</Text>
                   <Text style={ls.muted} numberOfLines={1}>
-                    {list.length ? `${time ?? ''}${day.calories ? ` · ${sum.kcal.toLocaleString()}${sum.partial.kcal ? '*' : ''} קק״ל` : ` · ${list.length} פריטים`}` : 'טרם תועד'}
+                    {list.length ? `${time ?? ''} · ${list.length} פריטים` : 'טרם תועד'}
                   </Text>
                 </View>
+                {list.length > 0 && day.calories && <View style={{ alignItems: 'center' }}><Text style={styles.mealKcal}>{sum.kcal.toLocaleString()}{sum.partial.kcal ? '*' : ''}</Text><Text style={ls.muted}>קלוריות</Text></View>}
                 {list.length > 0 && <Icon name="chevronBack" size={18} color={light.text2} />}
               </Pressable>
               {list.length > 0 && (
                 <Text style={styles.items} numberOfLines={2}>{list.map((e) => e.name).join(' · ')}</Text>
               )}
-              {!future && (
+              {!future && list.length > 0 && (
                 <Tap onPress={() => addMeal(m.key)} label={`הוספה ל${label}`}>
                   <View style={styles.addRow}><Icon name="plus" size={18} color={light.accentText} /><Text style={styles.addRowText}>הוספה</Text></View>
                 </Tap>
@@ -158,6 +187,8 @@ export default function Diary() {
       <Tap onPress={() => setNewMeal(true)} label="הוספת ארוחה נוספת">
         <View style={styles.addMeal}><Icon name="plus" size={18} color={light.accent} /><Text style={styles.addMealText}>ארוחה נוספת</Text></View>
       </Tap>
+
+      </>)}
 
       <CalendarSheet visible={calendar} value={date} logged={loggedDates} onClose={() => setCalendar(false)} onPick={(d) => { setDate(d); setCalendar(false); }} />
 
@@ -200,13 +231,13 @@ function Sum({ v, l, big }: { v: string; l: string; big?: boolean }) {
 const styles = StyleSheet.create({
   week: { flexDirection: 'row', alignItems: 'center', gap: 2, justifyContent: 'center' },
   weekArrow: { width: 40, height: 56, alignItems: 'center', justifyContent: 'center' },
-  wd: { width: 38, paddingVertical: 6, alignItems: 'center', borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.18)', minHeight: 58 },
-  wdOn: { backgroundColor: '#F2A05C', borderColor: '#F2A05C' },
-  wdToday: { borderColor: '#F2A05C' },
+  wd: { width: 38, paddingVertical: 6, alignItems: 'center', borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', minHeight: 58 },
+  wdOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  wdToday: { borderColor: colors.accent },
   wdDay: { fontFamily: fonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.75)' },
   wdNum: { fontFamily: fonts.bold, fontSize: 16, color: '#fff' },
   dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#F2A05C', marginTop: 2 },
-  summary: { flexDirection: 'row', alignItems: 'flex-end' },
+  summary: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 24, backgroundColor: 'rgba(48,50,54,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   sumV: { fontFamily: fonts.bold, fontSize: 20, color: '#fff', fontVariant: ['tabular-nums'] },
   sumL: { fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.75)' },
   today: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 6, paddingHorizontal: 14, minHeight: 44, borderRadius: 22, backgroundColor: light.accentSoft, marginBottom: 10 },
@@ -219,12 +250,15 @@ const styles = StyleSheet.create({
   meal: { backgroundColor: light.card, borderRadius: radius.lg, padding: 12, gap: 6 },
   mealHead: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 },
   mealIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: light.accentSoft, alignItems: 'center', justifyContent: 'center' },
-  mealPhoto: { width: 52, height: 52, borderRadius: 16 },
+  mealPhoto: { width: 72, height: 56, borderRadius: 16 },
+  mealKcal: { fontFamily: fonts.bold, fontSize: 18, color: light.text, fontVariant: ['tabular-nums'] },
+  ringV: { fontFamily: fonts.bold, fontSize: 17, color: '#fff' },
+  weekRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: light.card, borderRadius: radius.md, paddingHorizontal: 14, minHeight: 56, borderWidth: 1.5, borderColor: 'transparent' },
   mealName: { fontFamily: fonts.bold, fontSize: 17, color: light.text },
   items: { fontFamily: fonts.regular, fontSize: 14, color: light.text2, lineHeight: 20 },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, alignSelf: 'flex-start', paddingHorizontal: 4 },
   addRowText: { fontFamily: fonts.semibold, fontSize: 15, color: light.accentText },
-  addMeal: { marginTop: space.md, minHeight: 50, borderRadius: radius.pill, borderWidth: 1.5, borderColor: 'rgba(242,107,29,0.4)', borderStyle: 'dashed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  addMeal: { marginTop: space.md, minHeight: 50, borderRadius: radius.pill, borderWidth: 1.5, borderColor: 'rgba(245,121,37,0.4)', borderStyle: 'dashed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addMealText: { fontFamily: fonts.semibold, fontSize: 15, color: light.accentText },
   eatBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: '#1F7A4D' },
   eatText: { fontFamily: fonts.semibold, fontSize: 14, color: '#fff' },

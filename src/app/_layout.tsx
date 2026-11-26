@@ -18,7 +18,7 @@ if (Platform.OS !== 'web') {
 } else if (typeof document !== 'undefined') {
   document.documentElement.dir = 'rtl';
   document.documentElement.lang = 'he';
-  document.body.style.backgroundColor = '#070403';
+  document.body.style.backgroundColor = '#0E0F10';
 }
 
 export default function RootLayout() {
@@ -53,9 +53,9 @@ export default function RootLayout() {
           >
             <Stack.Screen name="index" options={{ animation: 'fade' }} />
             <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-            <Stack.Screen name="quick-add" options={{ presentation: 'transparentModal', animation: 'fade' }} />
-            <Stack.Screen name="add-meal" options={{ presentation: 'transparentModal', animation: 'fade' }} />
-            <Stack.Screen name="add-calories" options={{ presentation: 'transparentModal', animation: 'fade' }} />
+            <Stack.Screen name="quick-add" options={{ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }} />
+            <Stack.Screen name="add-meal" options={{ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }} />
+            <Stack.Screen name="add-calories" options={{ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }} />
           </Stack>
         ) : (
           <View style={styles.root} />

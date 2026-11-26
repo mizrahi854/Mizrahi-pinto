@@ -123,7 +123,7 @@ function StatTile({ icon, title, value, dot, target, unit, onPress }: { icon: Ic
   return (
     <Tap onPress={onPress} label={`${title}: ${dot ?? value}${target ? ` מתוך ${target}` : ''} ${unit ?? ''}`} style={{ flex: 1 }}>
       <View style={styles.tile}>
-        <LinearGradient colors={['rgba(232,120,42,0.14)', 'rgba(232,120,42,0.02)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        <LinearGradient colors={['rgba(245,121,37,0.14)', 'rgba(245,121,37,0.02)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <Row style={{ justifyContent: 'space-between' }}>
           <Icon name="chevron" size={14} color={colors.text2} />
           <View style={{ flex: 1, alignItems: 'flex-start', paddingHorizontal: 6, gap: 6, minWidth: 0 }}>
@@ -152,7 +152,7 @@ function GlowCard({ children, onPress, label }: { children: React.ReactNode; onP
   return (
     <Tap onPress={onPress} label={label}>
       <View style={styles.glow}>
-        <LinearGradient colors={['rgba(232,120,42,0.18)', 'rgba(20,12,8,0.0)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 0.6 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        <LinearGradient colors={['rgba(245,121,37,0.18)', 'rgba(28,29,32,0.0)']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 0.6 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
         {children}
       </View>
     </Tap>
@@ -160,11 +160,11 @@ function GlowCard({ children, onPress, label }: { children: React.ReactNode; onP
 }
 
 const styles = StyleSheet.create({
-  panelBox: { gap: 8, padding: 8, borderRadius: radius.xl, backgroundColor: 'rgba(40,22,12,0.55)', borderWidth: 1, borderColor: 'rgba(255,150,80,0.18)' },
-  tile: { minHeight: 82, paddingVertical: 12, paddingHorizontal: 9, borderRadius: radius.md, backgroundColor: 'rgba(30,17,10,0.9)', borderWidth: 1, borderColor: 'rgba(255,150,80,0.22)', overflow: 'hidden', justifyContent: 'center' },
+  panelBox: { gap: 8, padding: 8, borderRadius: radius.xl, backgroundColor: 'rgba(40,22,12,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  tile: { minHeight: 82, paddingVertical: 12, paddingHorizontal: 9, borderRadius: radius.md, backgroundColor: 'rgba(30,17,10,0.9)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', overflow: 'hidden', justifyContent: 'center' },
   tileTitle: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.text },
   value: { fontFamily: fonts.semibold, fontSize: 17, color: colors.text, fontVariant: ['tabular-nums'] },
   unit: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.text2 },
-  glow: { marginTop: space.md, padding: 16, borderRadius: radius.xl, backgroundColor: 'rgba(26,15,9,0.95)', borderWidth: 1, borderColor: 'rgba(232,120,42,0.4)', overflow: 'hidden' },
+  glow: { marginTop: space.md, padding: 16, borderRadius: radius.xl, backgroundColor: 'rgba(26,15,9,0.95)', borderWidth: 1, borderColor: 'rgba(245,121,37,0.4)', overflow: 'hidden' },
   cardTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.text },
 });

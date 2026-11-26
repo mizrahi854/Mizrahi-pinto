@@ -46,7 +46,7 @@ export function Card({ children, style, onPress, label, highlight }: { children:
   const inner = (
     <View style={[styles.card, highlight && styles.cardHighlight, style]}>
       <LinearGradient
-        colors={highlight ? ['rgba(232,120,42,0.22)', 'rgba(232,120,42,0.04)'] : ['rgba(255,255,255,0.055)', 'rgba(255,255,255,0.0)']}
+        colors={highlight ? ['rgba(245,121,37,0.22)', 'rgba(245,121,37,0.04)'] : ['rgba(255,255,255,0.055)', 'rgba(255,255,255,0.0)']}
         start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
         style={[StyleSheet.absoluteFill, { borderRadius: radius.lg }]}
         pointerEvents="none"
@@ -165,7 +165,7 @@ export function Screen({
   return (
     <View style={styles.screen}>
       <View style={styles.screenInner}>
-        <LinearGradient colors={['rgba(168,60,0,0.32)', 'rgba(120,40,0,0.10)', 'rgba(11,7,5,0)']} style={styles.topGlow} pointerEvents="none" start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+        <LinearGradient colors={['rgba(168,60,0,0.32)', 'rgba(120,40,0,0.10)', 'rgba(19,20,22,0)']} style={styles.topGlow} pointerEvents="none" start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
         {header}
         {body}
         {footer && <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>{footer}</View>}
@@ -362,7 +362,7 @@ export const styles = StyleSheet.create({
   headerSide: { width: 52 },
   headerTitle: { ...type.heading, color: colors.text },
   headerSub: { ...type.caption, color: colors.text2 },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.md, paddingTop: 12, backgroundColor: 'rgba(11,7,5,0.92)', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.md, paddingTop: 12, backgroundColor: 'rgba(19,20,22,0.92)', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   card: { backgroundColor: colors.glass, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.md, overflow: 'hidden' },
   cardHighlight: { borderColor: colors.borderStrong },
   btn: { minHeight: 52, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: space.xl, overflow: 'hidden' },

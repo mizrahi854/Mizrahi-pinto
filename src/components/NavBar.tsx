@@ -13,9 +13,9 @@ import { MAX_W } from './Brand';
 
 const ITEMS: { route: string; label: string; icon: IconName }[] = [
   { route: 'index', label: 'בית', icon: 'home' },
-  { route: 'diary', label: 'יומן', icon: 'food' },
+  { route: 'diary', label: 'יומן תזונה', icon: 'book' },
   { route: '+', label: 'הוספה', icon: 'plus' },
-  { route: 'plan', label: 'השבוע', icon: 'calendar' },
+  { route: 'plan', label: 'תכנון', icon: 'calendar' },
   { route: 'profile', label: 'פרופיל', icon: 'user' },
 ];
 
@@ -30,7 +30,7 @@ export function NavBar({ state, navigation }: { state: { index: number; routes: 
       <View style={styles.shadow}>
         <View style={[styles.bar, lightMode && styles.barLight, solid && { backgroundColor: lightMode ? light.card : colors.surfaceRaised }]} accessibilityRole="tablist">
           {!solid && <BlurView intensity={40} tint={lightMode ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />}
-          <LinearGradient colors={lightMode ? ['rgba(255,255,255,0.7)', 'rgba(255,255,255,0.55)'] : ['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.0)', 'rgba(232,120,42,0.08)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <LinearGradient colors={lightMode ? ['rgba(255,255,255,0.72)', 'rgba(255,255,255,0.55)'] : ['rgba(255,255,255,0.09)', 'rgba(255,255,255,0.02)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
           <View style={styles.reflection} pointerEvents="none" />
           {ITEMS.map((it) =>
             it.route === '+' ? (
@@ -68,12 +68,12 @@ function Tab({ item, active, onPress, lightMode }: { item: (typeof ITEMS)[number
   return (
     <Pressable onPress={onPress} style={styles.tab} accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: active }}>
       <Animated.View style={[styles.activeBg, bg]}>
-        <LinearGradient colors={['rgba(232,120,42,0.38)', 'rgba(168,60,0,0.22)']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['rgba(245,121,37,0.32)', 'rgba(245,121,37,0.10)']} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <Animated.View style={ic}>
-        <Icon name={item.icon} size={23} color={lightMode ? (active ? light.accentText : '#4A4440') : active ? colors.text : 'rgba(255,255,255,0.72)'} strokeWidth={active ? 2 : 1.6} />
+        <Icon name={item.icon} size={23} color={lightMode ? (active ? light.accentText : '#3A3C40') : active ? colors.accent : 'rgba(245,245,245,0.78)'} strokeWidth={active ? 2 : 1.6} />
       </Animated.View>
-      <Text style={[styles.label, lightMode && { color: '#6E6763' }, active && { color: lightMode ? light.accentText : colors.text, fontFamily: fonts.semibold }]} numberOfLines={1}>{item.label}</Text>
+      <Text style={[styles.label, lightMode && { color: '#4A4C50' }, active && { color: lightMode ? light.accentText : colors.accent, fontFamily: fonts.semibold }]} numberOfLines={1}>{item.label}</Text>
     </Pressable>
   );
 }
@@ -85,7 +85,7 @@ function PlusButton() {
   useEffect(() => {
     if (!reduce) glow.set(withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true));
   }, [reduce, glow]);
-  const g = useAnimatedStyle(() => ({ opacity: 0.35 + 0.35 * glow.value, transform: [{ scale: 0.95 + 0.1 * glow.value }] }));
+  const g = useAnimatedStyle(() => ({ opacity: 0.16 + 0.2 * glow.value, transform: [{ scale: 0.95 + 0.1 * glow.value }] }));
   const p = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
   return (
     <Pressable
@@ -108,12 +108,12 @@ function PlusButton() {
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', paddingHorizontal: 14 },
-  shadow: { width: '100%', maxWidth: MAX_W - 28, borderRadius: 34, ...(Platform.OS === 'web' ? ({ boxShadow: '0 14px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,150,80,0.10)' } as any) : { shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 }) },
-  bar: { flexDirection: 'row', alignItems: 'center', height: 74, borderRadius: 34, overflow: 'hidden', backgroundColor: 'rgba(24,14,9,0.72)', borderWidth: 1, borderColor: 'rgba(255,170,110,0.18)', paddingHorizontal: 6 },
-  barLight: { backgroundColor: 'rgba(255,255,255,0.78)', borderColor: 'rgba(20,12,6,0.08)' },
+  shadow: { width: '100%', maxWidth: MAX_W - 28, borderRadius: 34, ...(Platform.OS === 'web' ? ({ boxShadow: '0 14px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.10)' } as any) : { shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 }) },
+  bar: { flexDirection: 'row', alignItems: 'center', height: 74, borderRadius: 34, overflow: 'hidden', backgroundColor: 'rgba(28,29,32,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 6 },
+  barLight: { backgroundColor: 'rgba(255,255,255,0.78)', borderColor: 'rgba(19,20,22,0.08)' },
   reflection: { position: 'absolute', top: 0, left: 24, right: 24, height: 1, backgroundColor: 'rgba(255,255,255,0.22)' },
   tab: { flex: 1, height: 62, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  activeBg: { position: 'absolute', top: 2, bottom: 2, left: 2, right: 2, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,170,110,0.28)' },
+  activeBg: { position: 'absolute', top: 2, bottom: 2, left: 2, right: 2, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(245,121,37,0.28)' },
   label: { fontFamily: fonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.7)' },
   plusSlot: { width: 74, height: 74, alignItems: 'center', justifyContent: 'center' },
   plusGlow: { position: 'absolute', width: 66, height: 66, borderRadius: 33, backgroundColor: colors.accent, ...(Platform.OS === 'web' ? ({ filter: 'blur(12px)' } as any) : {}) },

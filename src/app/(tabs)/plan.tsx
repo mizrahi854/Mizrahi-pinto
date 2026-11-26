@@ -5,7 +5,12 @@ import { LightScreen, LIconButton, LCard, ls } from '@/components/light';
 import { Tap, Sheet, toast, ListItem, Button } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
 import { useApp } from '@/store/useApp';
-import { useWeek } from '@/store/selectors';
+import { useWeek, useNextWorkout } from '@/store/selectors';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ANATOMY } from '@/data/media';
+import { whenLabel } from '@/lib/workouts';
+import { colors } from '@/theme/tokens';
 import { addDays, dateKey, parseKey, DAY_LONG, weekOf } from '@/lib/dates';
 import { MUSCLE_LABELS } from '@/lib/workouts';
 import { restaurantLabel } from '@/lib/restaurants';
@@ -31,6 +36,7 @@ export default function Plan() {
   const setTemplate = useApp((s) => s.setTemplate);
   const template = useApp((s) => s.template);
   const profile = useApp((s) => s.profile);
+  const { next } = useNextWorkout();
   const [dayMenu, setDayMenu] = useState<string | null>(null);
   const [tools, setTools] = useState(false);
   const [flex, setFlex] = useState(false);
@@ -47,21 +53,43 @@ export default function Plan() {
 
   return (
     <LightScreen
-      title="התוכנית השבועית"
+      title="אימונים ותכנון"
       subtitle={`${label} · ${range}`}
       back={false}
       tabBar
       right={<LIconButton icon="settings" label="כלי תכנון" onPress={() => setTools(true)} />}
-      heroHeight={92}
+      heroHeight={292}
       hero={
-        <View style={styles.hero}>
-          <Tap onPress={() => setAnchor(addDays(anchor, -7))} label="שבוע קודם"><View style={styles.nav}><Icon name="chevronBack" size={20} color="#fff" /></View></Tap>
-          <View style={styles.stats}>
-            <HeroStat v={`${week.workouts.done}/${week.workouts.planned}`} l="אימונים" />
-            <HeroStat v={`${week.mealsPlannedEaten}/${week.mealsPlanned}`} l="ארוחות מתוכננות" />
-            <HeroStat v={`${week.loggedCount}/7`} l="ימי תיעוד" />
+        <View>
+          <View style={styles.anat} pointerEvents="none">
+            <LinearGradient colors={['rgba(217,96,26,0.55)', 'rgba(184,74,12,0.18)', 'rgba(19,20,22,0)']} start={{ x: 0, y: 0.3 }} end={{ x: 0.9, y: 0.7 }} style={StyleSheet.absoluteFill} />
+            <Image source={ANATOMY.detail} style={{ width: '100%', height: '100%' }} contentFit="contain" accessibilityIgnoresInvertColors />
           </View>
-          <Tap onPress={() => setAnchor(addDays(anchor, 7))} label="שבוע הבא"><View style={styles.nav}><Icon name="chevron" size={20} color="#fff" /></View></Tap>
+          <Tap onPress={() => router.push(next ? { pathname: '/workout', params: { id: next.id } } : { pathname: '/workout' })} label={next ? `האימון הבא: ${next.name}, ${whenLabel(next)}` : 'הוספת אימון'}>
+            <View style={styles.nextBox}>
+              <Text style={styles.kicker}>האימון הבא</Text>
+              <Text style={styles.nextName} numberOfLines={2}>{next?.name ?? 'אין אימון מתוכנן'}</Text>
+              <Text style={styles.nextWhen}>{next ? whenLabel(next) : 'הוסף אימון לשבוע'}</Text>
+              {next && next.muscles.length > 0 && (
+                <View style={styles.mChips}>{next.muscles.slice(0, 3).map((m) => <View key={m} style={styles.mChip}><Text style={styles.mChipText}>{MUSCLE_LABELS[m]}</Text></View>)}</View>
+              )}
+            </View>
+          </Tap>
+          {next && (
+            <View style={styles.heroBtns}>
+              <Tap onPress={() => toggleDone(next)} label={`סימון ${next.name} כהושלם`}><View style={[styles.hBtn, styles.hBtnOn]}><Icon name="check" size={18} color={colors.textOnAccent} strokeWidth={2.4} /><Text style={[styles.hBtnText, { color: colors.textOnAccent }]}>הושלם</Text></View></Tap>
+              <Tap onPress={() => router.push({ pathname: '/workout', params: { id: next.id } })} label="שינוי מועד"><View style={styles.hBtn}><Icon name="clock" size={18} color="#fff" /><Text style={styles.hBtnText}>שינוי מועד</Text></View></Tap>
+            </View>
+          )}
+          <View style={styles.hero}>
+            <Tap onPress={() => setAnchor(addDays(anchor, -7))} label="שבוע קודם"><View style={styles.nav}><Icon name="chevronBack" size={20} color="#fff" /></View></Tap>
+            <View style={styles.stats}>
+              <HeroStat v={`${week.workouts.done}/${week.workouts.planned}`} l="אימונים" />
+              <HeroStat v={`${week.mealsPlannedEaten}/${week.mealsPlanned}`} l="ארוחות מתוכננות" />
+              <HeroStat v={`${week.loggedCount}/7`} l="ימי תיעוד" />
+            </View>
+            <Tap onPress={() => setAnchor(addDays(anchor, 7))} label="שבוע הבא"><View style={styles.nav}><Icon name="chevron" size={20} color="#fff" /></View></Tap>
+          </View>
         </View>
       }
     >
@@ -251,7 +279,19 @@ function HeroStat({ v, l }: { v: string; l: string }) {
 }
 
 const styles = StyleSheet.create({
-  hero: { flexDirection: 'row', alignItems: 'center' },
+  hero: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  anat: { position: 'absolute', left: -16, top: 0, width: 200, height: 230, borderRadius: 30, overflow: 'hidden' },
+  nextBox: { marginStart: 190, minHeight: 150, justifyContent: 'center', alignItems: 'flex-start', gap: 4 },
+  kicker: { fontFamily: fonts.medium, fontSize: 15, color: 'rgba(245,245,245,0.75)' },
+  nextName: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 30, color: '#fff' },
+  nextWhen: { fontFamily: fonts.semibold, fontSize: 15, color: colors.accent },
+  mChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  mChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  mChipText: { fontFamily: fonts.medium, fontSize: 12, color: '#fff' },
+  heroBtns: { flexDirection: 'row', gap: 8, marginStart: 190, marginTop: 2 },
+  hBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' },
+  hBtnOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  hBtnText: { fontFamily: fonts.semibold, fontSize: 14, color: '#fff' },
   nav: { width: 40, height: 52, alignItems: 'center', justifyContent: 'center' },
   stats: { flex: 1, flexDirection: 'row' },
   heroV: { fontFamily: fonts.bold, fontSize: 24, color: '#fff', fontVariant: ['tabular-nums'] },
@@ -268,7 +308,7 @@ const styles = StyleSheet.create({
   addBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: light.accentText, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: light.border, minHeight: 52 },
   rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 },
-  check: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#D9D3CF', alignItems: 'center', justifyContent: 'center' },
+  check: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#D0D1D4', alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: '#1F7A4D', borderColor: '#1F7A4D' },
   link: { fontFamily: fonts.semibold, fontSize: 14, color: light.accentText, paddingVertical: 10 },
   sumRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

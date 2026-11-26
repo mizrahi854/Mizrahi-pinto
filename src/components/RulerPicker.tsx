@@ -108,7 +108,7 @@ export function RulerPicker({ min, max, step = 1, value, onChange, unit, label, 
             return <Line key={i} x1={x} x2={x} y1={major ? 8 : mid ? 18 : 26} y2={56} stroke="#fff" strokeOpacity={(major ? 0.85 : mid ? 0.5 : 0.25) * (1 - dist * 0.7)} strokeWidth={major ? 1.6 : 1} />;
           })}
         </Svg>
-        <LinearGradient colors={['rgba(232,120,42,0)', 'rgba(232,120,42,0.18)', 'rgba(232,120,42,0)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[StyleSheet.absoluteFill, { left: w / 2 - 40, width: 80 }]} pointerEvents="none" />
+        <LinearGradient colors={['rgba(245,121,37,0)', 'rgba(245,121,37,0.18)', 'rgba(245,121,37,0)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[StyleSheet.absoluteFill, { left: w / 2 - 40, width: 80 }]} pointerEvents="none" />
         <View pointerEvents="none" style={[styles.indicator, { left: w / 2 - 1.5 }]} />
       </View>
       <View style={styles.manual}>

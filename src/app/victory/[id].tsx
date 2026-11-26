@@ -80,7 +80,7 @@ export default function ChallengeDetail() {
             const rest = c.restDays.includes(d);
             return (
               <View key={d} accessible accessibilityLabel={`${parseKey(d).getDate()}/${parseKey(d).getMonth() + 1}: ${rest ? 'מנוחה' : full ? 'הושלם' : n ? 'חלקי' : d > today ? 'עתידי' : 'ללא תיעוד'}`}
-                style={[styles.cell, full && { backgroundColor: colors.accent }, n > 0 && !full && { backgroundColor: 'rgba(232,120,42,0.35)' }, rest && { borderStyle: 'dashed' }, d === today && { borderColor: colors.accentLight, borderWidth: 2 }, d > today && { opacity: 0.35 }]}>
+                style={[styles.cell, full && { backgroundColor: colors.accent }, n > 0 && !full && { backgroundColor: 'rgba(245,121,37,0.35)' }, rest && { borderStyle: 'dashed' }, d === today && { borderColor: colors.accentLight, borderWidth: 2 }, d > today && { opacity: 0.35 }]}>
                 <Text style={{ fontSize: 11, color: full ? colors.textOnAccent : colors.text2, fontFamily: fonts.medium }}>{parseKey(d).getDate()}</Text>
               </View>
             );
@@ -131,10 +131,10 @@ export default function ChallengeDetail() {
 
 const styles = StyleSheet.create({
   task: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.border, marginBottom: 8, minHeight: 56 },
-  taskDone: { borderColor: colors.borderStrong, backgroundColor: 'rgba(232,120,42,0.1)' },
+  taskDone: { borderColor: colors.borderStrong, backgroundColor: 'rgba(245,121,37,0.1)' },
   check: { width: 26, height: 26, borderRadius: 9, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   cell: { width: 34, height: 34, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.03)' },
-  celebrate: { alignItems: 'center', gap: 6, padding: space.md, marginBottom: space.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.accent, backgroundColor: 'rgba(232,120,42,0.12)' },
+  celebrate: { alignItems: 'center', gap: 6, padding: space.md, marginBottom: space.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.accent, backgroundColor: 'rgba(245,121,37,0.12)' },
 });

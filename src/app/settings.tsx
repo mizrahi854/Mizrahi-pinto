@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Switch, Platform, Share, Linking } from 'react-native';
+import { Platform, Share, Linking } from 'react-native';
+import { DarkSwitch } from '@/components/glass';
 import { router } from 'expo-router';
 import { Screen, Section, ListItem, Row, T, Card, Chip, Sheet, Button, Field, toast, Badge, Stepper } from '@/components/ui';
 import { useApp } from '@/store/useApp';
@@ -46,7 +47,7 @@ export default function Settings() {
 
       <Section title="נגישות ותנועה">
         <Card style={{ gap: 10 }}>
-          <Row style={{ justifyContent: 'space-between' }}><T.Body>רטט במגע</T.Body><Switch value={settings.haptics} onValueChange={(v) => updateSettings({ haptics: v })} trackColor={{ true: colors.accent, false: colors.track }} thumbColor="#fff" {...({ activeThumbColor: '#fff' } as any)} /></Row>
+          <Row style={{ justifyContent: 'space-between' }}><T.Body>רטט במגע</T.Body><DarkSwitch value={settings.haptics} onChange={(v) => updateSettings({ haptics: v })} label="רטט במגע" /></Row>
           <T.Caption>האנימציות מכבדות את ״הפחתת תנועה״ של iOS. גודל הטקסט מכבד את הגדרות המערכת.</T.Caption>
         </Card>
       </Section>

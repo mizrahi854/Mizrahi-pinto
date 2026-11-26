@@ -1,3 +1,4 @@
+import { MEAL_PHOTO } from '@/data/media';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -76,6 +77,17 @@ export default function RestaurantMode() {
 
   return (
     <LightScreen title="מצב מסעדה" subtitle={event ? `${event.title} · ${prettyDate(event.date)}${event.time ? ` ${event.time}` : ''}` : 'אני יוצא למסעדה'}
+      heroHeight={128}
+      hero={
+        <View style={styles.hero}>
+          <Image source={MEAL_PHOTO.dinner} style={styles.heroImg} contentFit="cover" accessibilityIgnoresInvertColors />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.heroTitle}>{event ? restaurantLabel(event.restaurantType) : 'אוכלים בחוץ, בלי לחץ'}</Text>
+            <Text style={styles.heroSub}>{event ? `${event.dishIds?.length ?? 0} מנות נבחרו מראש` : `${dishes.length} מנות שמורות · ${restaurants.length} מסעדות`}</Text>
+            <Text style={styles.heroNote}>בלי פיצוי ובלי ענישה – רק תכנון.</Text>
+          </View>
+        </View>
+      }
       footer={event ? <LPrimary title="הזנת מנה ידנית" icon="edit" onPress={() => router.push({ pathname: '/dish', params: { event: event.id, type: type ?? '' } })} /> : <LPrimary title="תכנון יציאה למסעדה" icon="calendar" onPress={() => router.push({ pathname: '/event', params: { type: 'restaurant' } })} />}>
       {event ? (
         <LCard style={{ gap: 10 }}>
@@ -195,6 +207,11 @@ function DishMenu({ id, onClose, eventId, onChoose, onLog, onFav, onDelete }: { 
 }
 
 const styles = StyleSheet.create({
+  hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  heroImg: { width: 110, height: 96, borderRadius: 24 },
+  heroTitle: { fontFamily: fonts.bold, fontSize: 21, color: '#fff' },
+  heroSub: { fontFamily: fonts.medium, fontSize: 14, color: 'rgba(245,245,245,0.82)' },
+  heroNote: { fontFamily: fonts.regular, fontSize: 13, color: '#FFB27A' },
   link: { fontFamily: fonts.semibold, fontSize: 15, color: light.accentText, paddingHorizontal: 10, paddingVertical: 12 },
   ghost: { minHeight: 52, borderRadius: radius.md, borderWidth: 1.5, borderColor: 'rgba(194,65,12,0.3)', backgroundColor: light.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   ghostText: { fontFamily: fonts.semibold, fontSize: 14.5, color: light.text },

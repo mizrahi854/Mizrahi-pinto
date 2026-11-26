@@ -40,7 +40,7 @@ export function NumRow({ value, target, unit, size = 21, small, color }: { value
 
 const styles = StyleSheet.create({
   numRow: { flexDirection: 'row-reverse', justifyContent: 'flex-end', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 4 },
-  tile: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 112, padding: 14, borderRadius: radius.lg, backgroundColor: 'rgba(22,13,8,0.78)', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  tile: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 112, padding: 14, borderRadius: radius.lg, backgroundColor: 'rgba(35,36,39,0.78)', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   title: { ...type.label, color: colors.text2, marginTop: 4 },
   value: { fontFamily: fonts.semibold, fontSize: 21, color: colors.text, fontVariant: ['tabular-nums'] },
   target: { fontFamily: fonts.regular, fontSize: 13, color: colors.text2 },

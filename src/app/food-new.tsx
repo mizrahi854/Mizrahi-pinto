@@ -172,9 +172,9 @@ const styles = StyleSheet.create({
   chip: { minHeight: 42, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: light.card, borderWidth: 1, borderColor: light.border, alignItems: 'center', justifyContent: 'center' },
   chipOn: { backgroundColor: light.accent, borderColor: light.accent },
   chipText: { fontFamily: fonts.medium, fontSize: 14, color: light.text },
-  photo: { height: 110, borderRadius: radius.md, backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#DCD5D0', alignItems: 'center', justifyContent: 'center', gap: 6, overflow: 'hidden' },
+  photo: { height: 110, borderRadius: radius.md, backgroundColor: light.card, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D4D5D8', alignItems: 'center', justifyContent: 'center', gap: 6, overflow: 'hidden' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: space.lg, minHeight: 44 },
-  box: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: '#CFC8C3', alignItems: 'center', justifyContent: 'center' },
+  box: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: '#C8C9CC', alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: light.accent, borderColor: light.accent },
   err: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: space.md, padding: 12, borderRadius: radius.md, backgroundColor: '#FDECE7' },
 });
