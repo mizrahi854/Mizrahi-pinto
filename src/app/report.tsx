@@ -5,18 +5,14 @@ import { Screen, Card, Row, T, Section, Badge, Button } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/store/useApp';
 import { useWeek } from '@/store/selectors';
-import { sessionVolume } from '@/lib/stats';
-import { isAdult } from '@/lib/nutrition';
+import { tracksCalories } from '@/store/useApp';
 import { colors, fonts, space } from '@/theme/tokens';
 
 /** 49 Weekly report – basic summary free; advanced trend analysis is a labelled Premium preview */
 export default function Report() {
   const week = useWeek();
-  const sessions = useApp((s) => s.sessions);
-  const adult = useApp((s) => isAdult(s.profile.age));
+  const adult = useApp((s) => tracksCalories(s.profile));
   const water = useApp((s) => s.water);
-  const done = sessions.filter((s) => s.status === 'done' && week.days.some((d) => d.date === s.date));
-  const sets = done.reduce((m, s) => m + sessionVolume(s).sets, 0);
   const waterDays = week.days.filter((d) => water[d.date] != null);
   const avgWater = waterDays.length ? waterDays.reduce((m, d) => m + (water[d.date] ?? 0), 0) / waterDays.length / 1000 : null;
 
@@ -27,7 +23,8 @@ export default function Report() {
         <Line icon="calendar" text={`${week.loggedCount} מתוך 7 ימים עם תיעוד תזונה`} />
         {adult && <Line icon="flame" text={week.avgKcal != null ? `ממוצע ${week.avgKcal.toLocaleString()} קק״ל לימים שתועדו` : 'אין ימי תיעוד'} />}
         {week.avgProtein != null && <Line icon="protein" text={`ממוצע חלבון ${week.avgProtein} ג׳`} />}
-        <Line icon="dumbbell" text={`${done.length} אימונים · ${sets} סטים`} />
+        <Line icon="dumbbell" text={`${week.workouts.done} מתוך ${week.workouts.planned} אימונים הושלמו`} />
+        <Line icon="bowl" text={week.mealsPlanned ? `${week.mealsPlannedEaten} מתוך ${week.mealsPlanned} ארוחות מתוכננות נאכלו` : 'לא תוכננו ארוחות מראש'} />
         <Line icon="drop" text={avgWater != null ? `שתייה ממוצעת ${avgWater.toFixed(1)} ליטר` : 'שתייה לא תועדה'} />
       </Card>
       <Section title="ניתוח מגמות מתקדם">

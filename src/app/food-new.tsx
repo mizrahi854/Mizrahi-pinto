@@ -74,7 +74,7 @@ export default function FoodNew() {
     haptic.success();
     toast(logNow ? `"${f.name}" נשמר ונוסף ליומן` : `"${f.name}" נשמר במוצרים שלי`);
     setTimeout(() => { busy.current = false; }, 700);
-    router.replace(logNow ? '/(tabs)/nutrition' : `/food/${f.id}`);
+    router.replace(logNow ? '/(tabs)/diary' : `/food/${f.id}`);
   };
 
   const unit = mode === 'serving' ? 'למנה' : `ל-100 ${basis === 'g' ? 'ג׳' : 'מ״ל'}`;

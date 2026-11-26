@@ -13,9 +13,9 @@ import { MAX_W } from './Brand';
 
 const ITEMS: { route: string; label: string; icon: IconName }[] = [
   { route: 'index', label: 'בית', icon: 'home' },
-  { route: 'stats', label: 'סטטיסטיקה', icon: 'chart' },
+  { route: 'diary', label: 'יומן', icon: 'food' },
   { route: '+', label: 'הוספה', icon: 'plus' },
-  { route: 'nutrition', label: 'תזונה', icon: 'food' },
+  { route: 'plan', label: 'השבוע', icon: 'calendar' },
   { route: 'profile', label: 'פרופיל', icon: 'user' },
 ];
 
@@ -23,7 +23,7 @@ const ITEMS: { route: string; label: string; icon: IconName }[] = [
 export function NavBar({ state, navigation }: { state: { index: number; routes: { name: string; key: string }[] }; navigation: any }) {
   const insets = useSafeAreaInsets();
   const activeName = state.routes[state.index]?.name;
-  const lightMode = activeName === 'nutrition';
+  const lightMode = activeName === 'diary' || activeName === 'plan';
   const solid = useReduceTransparency();
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - 6, 10) }]}>

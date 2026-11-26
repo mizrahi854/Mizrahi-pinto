@@ -39,9 +39,10 @@ export function LightScreen({
       <StatusBar style="light" />
       <View style={[s.inner, { width: w }]}>
         {scroll ? (
-          <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} stickyHeaderIndices={undefined}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} stickyHeaderIndices={undefined}>
             {header}
-            <View style={s.body}>{children}</View>
+            {/* the light body always reaches the bottom (no dark strip under short screens) */}
+            <View style={[s.body, { flexGrow: 1, paddingBottom: bottomPad }]}>{children}</View>
           </ScrollView>
         ) : (
           <View style={{ flex: 1 }}>

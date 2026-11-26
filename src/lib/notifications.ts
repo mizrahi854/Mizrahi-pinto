@@ -40,7 +40,12 @@ export function initNotifications() {
 
 const BODY: Record<Reminder['type'], string> = {
   alarm: 'בוקר טוב! הגיע הזמן לקום.',
-  workout: 'האימון שתכננת מחכה לך. אפשר גם לדחות או לשנות יום.',
+  workout: 'האימון הבא שלך מתקרב. אפשר גם לדחות או לשנות מועד.',
+  did_train: 'התאמנת היום? אפשר לסמן ✓ בכרטיס האימון.',
+  daily: 'רגע לעצמך: תיעוד קצר של היום.',
+  plan_week: 'שבוע חדש מתחיל – כמה דקות לתכנון אימונים וארוחות?',
+  shabbat_prep: 'הזמן להכין את תוכנית שישי-שבת ורשימת הקניות.',
+  restaurant: 'יציאה למסעדה מתקרבת – אפשר לבחור מנה מראש.',
   meal: 'תזכורת עדינה לתעד את הארוחה.',
   water: 'כוס מים?',
   sleep: 'הזמן להתחיל להירגע לקראת שינה.',
@@ -48,13 +53,14 @@ const BODY: Record<Reminder['type'], string> = {
 };
 
 /** (Re)schedule one reminder; returns the scheduled ids. Weekday mapping: 0=Sunday → 1. */
-export async function scheduleReminder(r: Reminder): Promise<string[]> {
+export async function scheduleReminder(r: Reminder, opts: { muted?: boolean; muteShabbat?: boolean } = {}): Promise<string[]> {
   if (!notificationsSupported) return [];
   await cancelReminder(r);
-  if (!r.enabled) return [];
+  if (!r.enabled || opts.muted) return [];
   const [h, m] = r.time.split(':').map(Number);
   const ids: string[] = [];
   for (const d of r.days) {
+    if (opts.muteShabbat && isShabbatSlot(d, h ?? 0)) continue;
     ids.push(
       await Notifications.scheduleNotificationAsync({
         content: { title: r.title, body: BODY[r.type], sound: r.sound === 'none' ? undefined : 'default', data: { reminderId: r.id } },
@@ -71,3 +77,6 @@ export async function cancelReminder(r: Reminder) {
     await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
   }
 }
+
+/** Approximate Shabbat window for muting (Friday from 16:00 through Saturday). Exact times vary by city and season. */
+export const isShabbatSlot = (weekday: number, hour: number) => weekday === 6 || (weekday === 5 && hour >= 16);

@@ -2,36 +2,21 @@ type ImageSourcePropType = number;
 
 /**
  * Freely-licensed media (see assets/credits.json + Help → קרדיט תמונות).
- * Exercise line art: Everkinetic via Wikimedia Commons (CC BY-SA 3.0).
+ * Muscle-group line art: Everkinetic via Wikimedia Commons (CC BY-SA 3.0).
  * Food photos: Wikimedia Commons (CC0 / Public domain / CC BY / CC BY-SA).
  * No branded packshots are used: GO / PRO / protein-drink products show a category icon instead.
  */
-export const EXERCISE_ART: Record<string, ImageSourcePropType> = {
-  bench: require('../../assets/exercises/bench-press.png'),
-  incline: require('../../assets/exercises/incline-bench-press.png'),
-  db_bench: require('../../assets/exercises/dumbbell-bench-press.png'),
-  ohp: require('../../assets/exercises/dumbbell-shoulder-press.png'),
-  curl: require('../../assets/exercises/biceps-curl.png'),
-  hammer: require('../../assets/exercises/biceps-curl.png'),
-  squat: require('../../assets/exercises/squats.png'),
-  goblet: require('../../assets/exercises/squats.png'),
-  bw_squat: require('../../assets/exercises/squats.png'),
-  rdl: require('../../assets/exercises/romanian-deadlift.png'),
-  deadlift: require('../../assets/exercises/romanian-deadlift.png'),
-  lunge: require('../../assets/exercises/walking-lunges.png'),
-  calf: require('../../assets/exercises/calf-raises.png'),
-  row: require('../../assets/exercises/reverse-grip-bent-over-rows.png'),
-  cable_fly: require('../../assets/exercises/cable-crossover.png'),
-};
-
-/** Same drawings as light lines on transparency, for dark cards. */
-export const EXERCISE_ART_ON_DARK: Record<string, ImageSourcePropType> = {
-  bench: require('../../assets/exercises/bench-press-light.png'),
-  ohp: require('../../assets/exercises/dumbbell-shoulder-press-light.png'),
-  squat: require('../../assets/exercises/squats-light.png'),
-  rdl: require('../../assets/exercises/romanian-deadlift-light.png'),
-  row: require('../../assets/exercises/reverse-grip-bent-over-rows-light.png'),
-  db_bench: require('../../assets/exercises/dumbbell-bench-press-light.png'),
+/** Muscle group → representative line drawing (light lines, for dark cards). */
+export const MUSCLE_ART: Partial<Record<import('./types').MuscleGroup, ImageSourcePropType>> = {
+  chest: require('../../assets/exercises/bench-press-light.png'),
+  back: require('../../assets/exercises/reverse-grip-bent-over-rows-light.png'),
+  shoulders: require('../../assets/exercises/dumbbell-shoulder-press-light.png'),
+  legs: require('../../assets/exercises/squats-light.png'),
+  biceps: require('../../assets/exercises/biceps-curl-light.png'),
+  triceps: require('../../assets/exercises/cable-crossover-light.png'),
+  glutes: require('../../assets/exercises/romanian-deadlift-light.png'),
+  full: require('../../assets/exercises/squats-light.png'),
+  cardio: require('../../assets/exercises/walking-lunges-light.png'),
 };
 
 /** Food id → photo (starter list ids from foods.ts). */

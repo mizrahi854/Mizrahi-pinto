@@ -2,30 +2,27 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
-  BasketItem,
-  Challenge, Food, FoodEntry, MealKey, Profile, Reminder, SavedMeal, TargetHistory, WorkoutPlan, WorkoutSession, PlanExercise,
+  BasketItem, Challenge, Food, FoodEntry, MealKey, Profile, Reminder, SavedMeal, TargetHistory,
+  PlannedWorkout, WorkoutTemplate, PlanEvent, PlannedMeal, ShabbatPlan, Restaurant, RestaurantDish, MealItem,
 } from '@/data/types';
 import { STARTER_FOODS } from '@/data/foods';
 import { IL_PRODUCTS } from '@/data/ilProducts';
-import { PLANS, planById } from '@/data/exercises';
-import { dateKey, nowTime, uid } from '@/lib/dates';
+import { TZAMERET_FOODS } from '@/data/tzameret';
+import { dateKey, nowTime, uid, weekOf, addDays } from '@/lib/dates';
+import { defaultProfile, defaultSettings, defaultShabbat, SHABBAT_MEALS, migrateState, type AppSettings } from './defaults';
+export { defaultProfile, defaultSettings, defaultShabbat, SHABBAT_MEALS, tracksCalories, migrateState, type AppSettings } from './defaults';
+import { fromTemplate, copyWeek } from '@/lib/workouts';
 import { nutrientsFor, sumNutrients } from '@/lib/nutrition';
 
 export const DEFAULT_MEALS: { key: MealKey; label: string; icon: 'bowl' | 'food' | 'moon' | 'star' }[] = [
   { key: 'breakfast', label: 'ארוחת בוקר', icon: 'bowl' },
   { key: 'lunch', label: 'ארוחת צהריים', icon: 'food' },
   { key: 'dinner', label: 'ארוחת ערב', icon: 'moon' },
-  { key: 'snack', label: 'נשנושים', icon: 'star' },
+  { key: 'snack', label: 'ארוחות ביניים', icon: 'star' },
 ];
 
-export const defaultProfile: Profile = {
-  name: '', age: null, language: 'he', goals: [], experience: 'beginner', equipment: [], workoutsPerWeek: 3, trainingDays: [0, 2, 4],
-  trainingTime: '18:00', foodPrefs: [], allergies: [], limitations: '', heightCm: null, weightKg: null, sex: null, activity: 'moderate',
-  planDays: 30, targetMode: 'none', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null, waterTargetMl: 3000,
-};
-
-export type AppSettings = { quietStart: string; quietEnd: string; quietEnabled: boolean; maxPerDay: number; units: 'metric'; reduceMotion: boolean; haptics: boolean };
-export const defaultSettings: AppSettings = { quietStart: '22:00', quietEnd: '07:00', quietEnabled: true, maxPerDay: 6, units: 'metric', reduceMotion: false, haptics: true };
+/** One measurement day (any field optional). */
+export type Measurement = { date: string; weightKg?: number; waistCm?: number; heightCm?: number; note?: string };
 
 export type Session = { mode: 'supabase' | 'local'; userId: string; email?: string; emailConfirmed?: boolean } | null;
 
@@ -44,15 +41,27 @@ type State = {
   basket: BasketItem[];
   searchHistory: string[];
   savedMeals: SavedMeal[];
-  mealPlan: Record<string, Record<string, string>>; // date -> meal -> recipeId
+  plannedMeals: PlannedMeal[];
+  events: PlanEvent[];
+  shabbat: ShabbatPlan;
+  restaurants: Restaurant[];
+  dishes: RestaurantDish[];
+  drafts: Record<string, unknown>;
+  /** where "add food" flows should log to (set by the add-meal panel / diary); expires after 30 min */
+  logCtx: { date: string; meal: MealKey; at: number } | null;
+  mealMeta: Record<string, { photo?: string; title?: string }>; // `${date}|${meal}` → photo / custom name
+  setLogCtx: (date: string, meal: MealKey) => void;
+  setMealMeta: (date: string, meal: MealKey, patch: { photo?: string; title?: string }) => void;
+  removeMeal: (date: string, meal: MealKey) => FoodEntry[];
+  restoreEntries: (list: FoodEntry[]) => void;
   shopping: { id: string; name: string; qty: string; checked: boolean; recipeId?: string }[];
   water: Record<string, number>;
   sleep: Record<string, number>;
-  measurements: { date: string; weightKg: number }[];
-  customPlans: WorkoutPlan[];
-  schedule: Record<number, string>; // weekday -> planId | 'rest'
-  sessions: WorkoutSession[];
-  activeSessionId: string | null;
+  measurements: Measurement[];
+  workouts: PlannedWorkout[];
+  template: WorkoutTemplate[];
+  templateAuto: boolean;
+  filledWeeks: string[];
   reminders: Reminder[];
   challenges: Challenge[];
   reports: { foodId?: string; text: string; at: number }[];
@@ -64,7 +73,7 @@ type State = {
   setHydrated: () => void;
   setSession: (s: Session) => void;
   saveDraft: (d: Partial<State['onboardingDraft']>) => void;
-  completeOnboarding: (p: Profile) => void;
+  completeOnboarding: (p: Profile, template?: WorkoutTemplate[]) => void;
   updateProfile: (p: Partial<Profile>) => void;
   setTargets: (t: Pick<Profile, 'targetMode' | 'calorieTarget' | 'proteinTarget' | 'carbsTarget' | 'fatTarget'>) => void;
   addCustomMeal: (label: string) => void;
@@ -93,7 +102,23 @@ type State = {
   logSavedMeal: (id: string, meal: MealKey, date: string) => void;
   reportFood: (foodId: string | undefined, text: string) => void;
 
-  setPlanned: (date: string, meal: string, recipeId: string | null) => void;
+  upsertPlannedMeal: (m: Omit<PlannedMeal, 'id'> & { id?: string }) => string;
+  removePlannedMeal: (id: string) => PlannedMeal | undefined;
+  restorePlannedMeal: (m: PlannedMeal) => void;
+  eatPlannedMeal: (id: string) => number;
+  upsertEvent: (e: Omit<PlanEvent, 'id'> & { id?: string }) => string;
+  removeEvent: (id: string) => PlanEvent | undefined;
+  restoreEvent: (e: PlanEvent) => void;
+  updateShabbat: (p: Partial<ShabbatPlan>) => void;
+  applyShabbat: (weekStart: string) => number;
+  upsertRestaurant: (r: Omit<Restaurant, 'id'> & { id?: string }) => string;
+  removeRestaurant: (id: string) => void;
+  upsertDish: (d: Omit<RestaurantDish, 'id' | 'createdAt'> & { id?: string }) => string;
+  removeDish: (id: string) => RestaurantDish | undefined;
+  restoreDish: (d: RestaurantDish) => void;
+  logDish: (id: string, date: string, meal: MealKey, time?: string) => FoodEntry | undefined;
+  setDraft: (key: string, value: unknown) => void;
+  clearDraft: (key: string) => void;
   addShopping: (items: { name: string; qty: string; recipeId?: string }[]) => void;
   toggleShopping: (id: string) => void;
   removeShopping: (id: string) => void;
@@ -102,16 +127,23 @@ type State = {
   addWater: (ml: number, date?: string) => void;
   setSleep: (h: number, date?: string) => void;
   addMeasurement: (kg: number, date?: string) => void;
+  upsertMeasurement: (m: Measurement) => void;
+  removeMeasurement: (date: string) => Measurement | undefined;
 
-  setSchedule: (day: number, planId: string) => void;
-  saveCustomPlan: (p: WorkoutPlan) => void;
-  deleteCustomPlan: (id: string) => void;
-  startWorkout: (planId: string) => string;
-  updateSession: (id: string, fn: (s: WorkoutSession) => WorkoutSession) => void;
-  pauseWorkout: (id: string) => void;
-  resumeWorkout: (id: string) => void;
-  finishWorkout: (id: string, notes?: string) => void;
-  discardWorkout: (id: string) => void;
+  upsertWorkout: (w: Omit<PlannedWorkout, 'id' | 'status'> & { id?: string; status?: PlannedWorkout['status'] }) => string;
+  removeWorkout: (id: string) => PlannedWorkout | undefined;
+  restoreWorkout: (w: PlannedWorkout) => void;
+  duplicateWorkout: (id: string, toDate: string) => string | undefined;
+  moveWorkout: (id: string, date: string, time?: string | null) => void;
+  completeWorkout: (id: string) => void;
+  skipWorkout: (id: string) => void;
+  reopenWorkout: (id: string) => void;
+  setTemplate: (t: WorkoutTemplate[], auto?: boolean) => void;
+  /** replace the recurring template and refill upcoming weeks (keeps done/edited workouts) */
+  applyTemplate: (t: WorkoutTemplate[]) => void;
+  saveWeekAsTemplate: (weekStart: string) => void;
+  copyWeekToNext: (weekStart: string) => number;
+  ensureWeeks: () => void;
 
   upsertReminder: (r: Reminder) => void;
   deleteReminder: (id: string) => void;
@@ -139,15 +171,22 @@ const initialData = {
   basket: [] as BasketItem[],
   searchHistory: [] as string[],
   savedMeals: [] as SavedMeal[],
-  mealPlan: {},
+  plannedMeals: [] as PlannedMeal[],
+  events: [] as PlanEvent[],
+  shabbat: defaultShabbat,
+  restaurants: [] as Restaurant[],
+  dishes: [] as RestaurantDish[],
+  drafts: {} as Record<string, unknown>,
+  logCtx: null as State['logCtx'],
+  mealMeta: {} as State['mealMeta'],
   shopping: [],
   water: {},
   sleep: {},
   measurements: [],
-  customPlans: [] as WorkoutPlan[],
-  schedule: { 0: 'push', 1: 'rest', 2: 'pull', 3: 'rest', 4: 'legs', 5: 'rest', 6: 'rest' } as Record<number, string>,
-  sessions: [] as WorkoutSession[],
-  activeSessionId: null as string | null,
+  workouts: [] as PlannedWorkout[],
+  template: [] as WorkoutTemplate[],
+  templateAuto: true,
+  filledWeeks: [] as string[],
   reminders: [] as Reminder[],
   challenges: [] as Challenge[],
   reports: [],
@@ -164,14 +203,16 @@ export const useApp = create<State>()(
       setHydrated: () => set({ hydrated: true }),
       setSession: (session) => set({ session }),
       saveDraft: (d) => set((s) => ({ onboardingDraft: { ...s.onboardingDraft, ...d } })),
-      completeOnboarding: (p) =>
-        set({
+      completeOnboarding: (p, template) => {
+        set((s) => ({
           profile: { ...p, targetsSince: dateKey() },
           onboarded: true,
           onboardingDraft: {},
           targetHistory: [{ from: dateKey(), calorieTarget: p.calorieTarget, proteinTarget: p.proteinTarget, carbsTarget: p.carbsTarget, fatTarget: p.fatTarget }],
-          schedule: buildSchedule(p),
-        }),
+        }));
+        if (template) get().applyTemplate(template);
+        else get().ensureWeeks();
+      },
       updateProfile: (p) => set((s) => ({ profile: { ...s.profile, ...p } })),
       // Target changes apply from today onwards; history kept for past days.
       setTargets: (t) =>
@@ -282,13 +323,103 @@ export const useApp = create<State>()(
       },
       reportFood: (foodId, text) => set((s) => ({ reports: [...s.reports, { foodId, text, at: Date.now() }] })),
 
-      setPlanned: (date, meal, recipeId) =>
+      upsertPlannedMeal: (m) => {
+        const id = m.id ?? uid();
+        set((s) => ({ plannedMeals: [...s.plannedMeals.filter((x) => x.id !== id), { ...m, id }] }));
+        return id;
+      },
+      removePlannedMeal: (id) => {
+        const m = get().plannedMeals.find((x) => x.id === id);
+        set((s) => ({ plannedMeals: s.plannedMeals.filter((x) => x.id !== id) }));
+        return m;
+      },
+      restorePlannedMeal: (m) => set((s) => ({ plannedMeals: [...s.plannedMeals, m] })),
+      eatPlannedMeal: (id) => {
+        const m = get().plannedMeals.find((x) => x.id === id);
+        if (!m || m.eatenAt) return 0;
+        const now = Date.now();
+        const items: MealItem[] = m.items.length ? m.items : [{ name: m.title, amount: 1, unitLabel: 'מנה', grams: null, nutrients: { kcal: null, protein: null, carbs: null, fat: null } }];
+        const add: FoodEntry[] = items.map((i, k) => ({ ...i, id: uid(), createdAt: now + k, date: m.date, meal: m.meal, time: nowTime(), note: m.items.length ? m.title : undefined }));
+        set((s) => ({ entries: [...s.entries, ...add], plannedMeals: s.plannedMeals.map((x) => (x.id === id ? { ...x, eatenAt: now } : x)) }));
+        return add.length;
+      },
+      upsertEvent: (e) => {
+        const id = e.id ?? uid();
+        set((s) => ({ events: [...s.events.filter((x) => x.id !== id), { ...e, id }] }));
+        return id;
+      },
+      removeEvent: (id) => {
+        const e = get().events.find((x) => x.id === id);
+        set((s) => ({ events: s.events.filter((x) => x.id !== id) }));
+        return e;
+      },
+      restoreEvent: (e) => set((s) => ({ events: [...s.events, e] })),
+      updateShabbat: (p) => set((s) => ({ shabbat: { ...s.shabbat, ...p } })),
+      applyShabbat: (weekStart) => {
+        const sh = get().shabbat;
+        const days = weekOf(weekStart);
+        let n = 0;
+        const meals: PlannedMeal[] = [];
+        for (const m of sh.meals) {
+          if (!m.enabled) continue;
+          const def = SHABBAT_MEALS.find((x) => x.key === m.key)!;
+          const date = days[def.day]!;
+          // don't duplicate a Shabbat meal that is already planned for that day
+          if (get().plannedMeals.some((x) => x.date === date && x.source === 'shabbat' && x.title.startsWith(def.label))) continue;
+          meals.push({ id: uid(), date, meal: def.meal, title: def.label + (m.family ? ' · משפחתית' : ''), items: m.dishes, note: m.note, source: 'shabbat' });
+          n++;
+        }
+        const wos: PlannedWorkout[] = [];
+        for (const [t, day] of [[sh.friWorkout, 5], [sh.satWorkout, 6]] as const) {
+          if (!t) continue;
+          const date = days[day]!;
+          if (get().workouts.some((w) => w.date === date && w.status !== 'skipped' && !w.rest)) continue;
+          wos.push({ id: uid(), date, time: t.time, name: t.name, muscles: t.muscles, rest: t.rest, durationMin: t.durationMin ?? null, status: 'planned' });
+        }
+        set((s) => ({
+          plannedMeals: [...s.plannedMeals, ...meals],
+          workouts: [...s.workouts.filter((w) => !(wos.some((x) => x.date === w.date) && w.rest)), ...wos],
+          shabbat: { ...s.shabbat, appliedWeeks: [...new Set([...s.shabbat.appliedWeeks, weekStart])].slice(-20) },
+        }));
+        if (sh.shopping.length) get().addShopping(sh.shopping.map((name) => ({ name, qty: '' })));
+        return n;
+      },
+      upsertRestaurant: (r) => {
+        const id = r.id ?? uid();
+        set((s) => ({ restaurants: [...s.restaurants.filter((x) => x.id !== id), { ...r, id }] }));
+        return id;
+      },
+      removeRestaurant: (id) => set((s) => ({ restaurants: s.restaurants.filter((x) => x.id !== id) })),
+      upsertDish: (d) => {
+        const id = d.id ?? uid();
         set((s) => {
-          const day = { ...(s.mealPlan[date] ?? {}) };
-          if (recipeId) day[meal] = recipeId;
-          else delete day[meal];
-          return { mealPlan: { ...s.mealPlan, [date]: day } };
-        }),
+          const old = s.dishes.find((x) => x.id === id);
+          return { dishes: [...s.dishes.filter((x) => x.id !== id), { ...d, id, createdAt: old?.createdAt ?? Date.now() }] };
+        });
+        return id;
+      },
+      removeDish: (id) => {
+        const d = get().dishes.find((x) => x.id === id);
+        set((s) => ({ dishes: s.dishes.filter((x) => x.id !== id) }));
+        return d;
+      },
+      restoreDish: (d) => set((s) => ({ dishes: [...s.dishes, d] })),
+      logDish: (id, date, meal, time) => {
+        const d = get().dishes.find((x) => x.id === id);
+        if (!d) return undefined;
+        const r = d.restaurantId ? get().restaurants.find((x) => x.id === d.restaurantId) : undefined;
+        return get().addEntry({ date, meal, time, name: d.name, amount: 1, unitLabel: 'מנה', grams: null, nutrients: d.nutrients, photoUri: d.photoUri, note: [r?.name ?? 'מסעדה', d.estimated ? 'הערכה' : 'נתון רשמי'].join(' · ') });
+      },
+      setLogCtx: (date, meal) => set({ logCtx: { date, meal, at: Date.now() } }),
+      setMealMeta: (date, meal, patch) => set((s) => ({ mealMeta: { ...s.mealMeta, [`${date}|${meal}`]: { ...s.mealMeta[`${date}|${meal}`], ...patch } } })),
+      removeMeal: (date, meal) => {
+        const list = get().entries.filter((e) => e.date === date && e.meal === meal);
+        set((s) => ({ entries: s.entries.filter((e) => !(e.date === date && e.meal === meal)) }));
+        return list;
+      },
+      restoreEntries: (list) => set((s) => ({ entries: [...s.entries, ...list.filter((e) => !s.entries.some((x) => x.id === e.id))] })),
+      setDraft: (key, value) => set((s) => ({ drafts: { ...s.drafts, [key]: value } })),
+      clearDraft: (key) => set((s) => { const d = { ...s.drafts }; delete d[key]; return { drafts: d }; }),
       addShopping: (items) =>
         set((s) => {
           const next = [...s.shopping];
@@ -305,38 +436,95 @@ export const useApp = create<State>()(
 
       addWater: (ml, date = dateKey()) => set((s) => ({ water: { ...s.water, [date]: Math.max(0, (s.water[date] ?? 0) + ml) } })),
       setSleep: (h, date = dateKey()) => set((s) => ({ sleep: { ...s.sleep, [date]: h } })),
-      addMeasurement: (kg, date = dateKey()) => set((s) => ({ measurements: [...s.measurements.filter((m) => m.date !== date), { date, weightKg: kg }].sort((a, b) => a.date.localeCompare(b.date)) })),
+      addMeasurement: (kg, date = dateKey()) => get().upsertMeasurement({ ...get().measurements.find((m) => m.date === date), date, weightKg: kg }),
+      upsertMeasurement: (m) => set((s) => ({ measurements: [...s.measurements.filter((x) => x.date !== m.date), m].sort((a, b) => a.date.localeCompare(b.date)) })),
+      removeMeasurement: (date) => {
+        const m = get().measurements.find((x) => x.date === date);
+        set((s) => ({ measurements: s.measurements.filter((x) => x.date !== date) }));
+        return m;
+      },
 
-      setSchedule: (day, planId) => set((s) => ({ schedule: { ...s.schedule, [day]: planId } })),
-      saveCustomPlan: (p) => set((s) => ({ customPlans: [p, ...s.customPlans.filter((x) => x.id !== p.id)] })),
-      deleteCustomPlan: (id) => set((s) => ({ customPlans: s.customPlans.filter((x) => x.id !== id) })),
-      startWorkout: (planId) => {
-        const existing = get().sessions.find((x) => x.id === get().activeSessionId && x.status !== 'done');
-        if (existing && existing.planId === planId) return existing.id;
-        const plan = planById(planId, get().customPlans) ?? PLANS[0]!;
-        const last = [...get().sessions].reverse().find((x) => x.planId === planId && x.status === 'done');
-        const s: WorkoutSession = {
-          id: uid(), planId, name: plan.name, date: dateKey(), startedAt: Date.now(), pausedMs: 0, status: 'active', current: 0,
-          exercises: plan.exercises.map((t: PlanExercise) => {
-            const prev = last?.exercises.find((e) => e.exerciseId === t.exerciseId);
-            return {
-              exerciseId: t.exerciseId, target: t,
-              sets: Array.from({ length: t.sets }, (_, i) => ({ reps: prev?.sets[i]?.reps ?? t.repsMax, weight: prev?.sets[i]?.weight ?? t.weight ?? null, done: false, seconds: t.seconds })),
-            };
+      upsertWorkout: (w) => {
+        const id = w.id ?? uid();
+        set((s) => {
+          const old = s.workouts.find((x) => x.id === id);
+          const next: PlannedWorkout = { ...old, ...w, id, status: w.status ?? old?.status ?? 'planned', fromTemplate: false } as PlannedWorkout;
+          // a real workout replaces a planned rest day on the same date
+          const others = s.workouts.filter((x) => x.id !== id && !(x.rest && !next.rest && x.date === next.date));
+          return { workouts: [...others, next] };
+        });
+        return id;
+      },
+      removeWorkout: (id) => {
+        const w = get().workouts.find((x) => x.id === id);
+        set((s) => ({ workouts: s.workouts.filter((x) => x.id !== id) }));
+        return w;
+      },
+      restoreWorkout: (w) => set((s) => ({ workouts: [...s.workouts, w] })),
+      duplicateWorkout: (id, toDate) => {
+        const w = get().workouts.find((x) => x.id === id);
+        if (!w) return undefined;
+        const nid = uid();
+        set((s) => ({ workouts: [...s.workouts.filter((x) => !(x.rest && x.date === toDate)), { ...w, id: nid, date: toDate, status: 'planned', doneAt: undefined, fromTemplate: false }] }));
+        return nid;
+      },
+      moveWorkout: (id, date, time) =>
+        set((s) => ({ workouts: s.workouts.filter((x) => !(x.rest && x.date === date && x.id !== id)).map((x) => (x.id === id ? { ...x, date, time: time === undefined ? x.time : time, status: 'planned', fromTemplate: false } : x)) })),
+      completeWorkout: (id) => {
+        const w = get().workouts.find((x) => x.id === id);
+        if (!w) return;
+        set((s) => ({
+          workouts: s.workouts.map((x) => (x.id === id ? { ...x, status: 'done', doneAt: Date.now() } : x)),
+          // central engine: finishing a workout also ticks the challenge's workout task for that day
+          challenges: s.challenges.map((c) => {
+            if (c.finished || w.date < c.startDate || w.date > c.endDate) return c;
+            const auto = c.tasks.filter((t) => t.auto === 'workout').map((t) => t.id);
+            if (!auto.length) return c;
+            const done = c.log[w.date] ?? [];
+            return { ...c, log: { ...c.log, [w.date]: [...new Set([...done, ...auto])] } };
           }),
-        };
-        set((st) => ({ sessions: [...st.sessions.filter((x) => !(x.id === st.activeSessionId && x.status !== 'done')), s], activeSessionId: s.id }));
-        return s.id;
+        }));
       },
-      updateSession: (id, fn) => set((s) => ({ sessions: s.sessions.map((x) => (x.id === id ? fn(x) : x)) })),
-      pauseWorkout: (id) => get().updateSession(id, (x) => (x.status === 'active' ? { ...x, status: 'paused', pausedAt: Date.now() } : x)),
-      resumeWorkout: (id) => get().updateSession(id, (x) => (x.status === 'paused' ? { ...x, status: 'active', pausedMs: x.pausedMs + (Date.now() - (x.pausedAt ?? Date.now())), pausedAt: undefined } : x)),
-      finishWorkout: (id, notes) => {
-        get().resumeWorkout(id);
-        get().updateSession(id, (x) => ({ ...x, status: 'done', endedAt: Date.now(), notes }));
-        set({ activeSessionId: null });
+      skipWorkout: (id) => set((s) => ({ workouts: s.workouts.map((x) => (x.id === id ? { ...x, status: 'skipped' } : x)) })),
+      reopenWorkout: (id) => set((s) => ({ workouts: s.workouts.map((x) => (x.id === id ? { ...x, status: 'planned', doneAt: undefined } : x)) })),
+      setTemplate: (t, auto) => set((s) => ({ template: t, templateAuto: auto ?? s.templateAuto })),
+      applyTemplate: (t) => {
+        // replace only future, not-yet-done template instances; keep anything the user did or edited
+        set((s) => ({ template: t, templateAuto: true, filledWeeks: [], workouts: s.workouts.filter((w) => !(w.fromTemplate && w.status === 'planned' && w.date >= dateKey())) }));
+        get().ensureWeeks();
       },
-      discardWorkout: (id) => set((s) => ({ sessions: s.sessions.filter((x) => x.id !== id), activeSessionId: null })),
+      saveWeekAsTemplate: (weekStart) => {
+        const days = weekOf(weekStart);
+        const wk = get().workouts.filter((w) => days.includes(w.date) && w.status !== 'skipped');
+        const t: WorkoutTemplate[] = [];
+        days.forEach((d, i) => {
+          const w = wk.find((x) => x.date === d && !x.rest) ?? wk.find((x) => x.date === d);
+          t.push(w ? { day: i, name: w.name, muscles: w.muscles, time: w.time, durationMin: w.durationMin, rest: w.rest } : { day: i, name: 'יום מנוחה', muscles: [], time: null, rest: true });
+        });
+        set({ template: t, templateAuto: true });
+      },
+      copyWeekToNext: (weekStart) => {
+        const copies = copyWeek(get().workouts, weekStart);
+        const next = addDays(weekStart, 7);
+        set((s) => ({
+          workouts: [...s.workouts.filter((w) => !(weekOf(next).includes(w.date) && w.status === 'planned')), ...copies],
+          filledWeeks: [...new Set([...s.filledWeeks, next])],
+          plannedMeals: [...s.plannedMeals, ...s.plannedMeals.filter((m) => weekOf(weekStart).includes(m.date)).map((m) => ({ ...m, id: uid(), date: addDays(m.date, 7), eatenAt: undefined }))],
+        }));
+        return copies.length;
+      },
+      ensureWeeks: () => {
+        const s = get();
+        const thisWeek = weekOf(dateKey())[0]!;
+        for (const ws of [thisWeek, addDays(thisWeek, 7)]) {
+          const st = get();
+          if (st.templateAuto && st.template.length && !st.filledWeeks.includes(ws)) {
+            const add = fromTemplate(st.template, ws, st.workouts).filter((w) => w.date >= dateKey());
+            set((x) => ({ workouts: [...x.workouts, ...add], filledWeeks: [...x.filledWeeks, ws].slice(-30) }));
+          }
+          if (s.shabbat.autoRepeat && !get().shabbat.appliedWeeks.includes(ws) && weekOf(ws)[6]! >= dateKey()) get().applyShabbat(ws);
+        }
+      },
 
       upsertReminder: (r) => set((s) => ({ reminders: [r, ...s.reminders.filter((x) => x.id !== r.id)] })),
       deleteReminder: (id) => set((s) => ({ reminders: s.reminders.filter((x) => x.id !== id) })),
@@ -360,32 +548,31 @@ export const useApp = create<State>()(
     }),
     {
       name: 'mizrahi-pinto-v1',
-      version: 1,
+      version: 2,
+      migrate: (persisted: any, version) => migrateState(persisted, version),
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ hydrated, ...rest }) => rest as any,
+      partialize: ({ hydrated, logCtx, ...rest }) => rest as any,
       onRehydrateStorage: () => (state) => state?.setHydrated(),
     },
   ),
 );
 
-/** Weekly schedule from onboarding answers: beginners/home get full-body, others rotate PPL. */
-export function buildSchedule(p: Pick<Profile, 'trainingDays' | 'experience' | 'equipment'>): Record<number, string> {
-  const home = p.equipment.length === 0 || (p.equipment.length === 1 && p.equipment[0] === 'none');
-  const rotation = home ? ['home'] : p.experience === 'beginner' ? ['full'] : ['push', 'pull', 'legs'];
-  const days = [...p.trainingDays].sort();
-  const out: Record<number, string> = {};
-  for (let d = 0; d < 7; d++) {
-    const idx = days.indexOf(d);
-    out[d] = idx === -1 ? 'rest' : rotation[idx % rotation.length]!;
-  }
-  return out;
-}
-
-export const allFoods = (userFoods: Food[]) => [...userFoods, ...STARTER_FOODS, ...IL_PRODUCTS];
-export const findFood = (id: string | undefined, userFoods: Food[]) => (id ? allFoods(userFoods).find((f) => f.id === id) : undefined);
+const BUILTIN = [...STARTER_FOODS, ...IL_PRODUCTS, ...TZAMERET_FOODS];
+const BUILTIN_BY_ID = new Map(BUILTIN.map((f) => [f.id, f]));
+let lastUser: Food[] | null = null;
+let lastAll: Food[] = BUILTIN;
+/** Every searchable food: user foods first, then starter list, Israeli packaged products and Tzameret. Memoised. */
+export const allFoods = (userFoods: Food[]) => {
+  if (userFoods !== lastUser) { lastUser = userFoods; lastAll = [...userFoods, ...BUILTIN]; }
+  return lastAll;
+};
+export const findFood = (id: string | undefined, userFoods: Food[]) => (id ? userFoods.find((f) => f.id === id) ?? BUILTIN_BY_ID.get(id) : undefined);
 
 /** Target active on a given date (history aware). */
 export const targetFor = (date: string, profile: Profile, hist: TargetHistory) => {
-  const h = [...hist].reverse().find((x) => x.from <= date);
-  return h ?? { from: date, calorieTarget: profile.calorieTarget, proteinTarget: profile.proteinTarget, carbsTarget: profile.carbsTarget, fatTarget: profile.fatTarget };
+  const h = [...hist].reverse().find((x) => x.from <= date) ?? { from: date, calorieTarget: profile.calorieTarget, proteinTarget: profile.proteinTarget, carbsTarget: profile.carbsTarget, fatTarget: profile.fatTarget };
+  // flexible weekday target (set in advance, e.g. Shabbat) – never lowered automatically after an over day
+  const flex = profile.dayTargets?.[new Date(date + 'T12:00:00').getDay()];
+  return flex != null && h.calorieTarget != null ? { ...h, calorieTarget: flex } : h;
 };
+

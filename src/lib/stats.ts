@@ -1,4 +1,4 @@
-import type { FoodEntry, WorkoutSession } from '../data/types';
+import type { FoodEntry, PlannedWorkout } from '../data/types';
 import { totalsOf } from './engine';
 import { addDays, dateKey, parseKey, DAY_SHORT } from './dates';
 
@@ -11,25 +11,17 @@ export function daysFor(n: number, end = dateKey()) {
 
 export const shortLabel = (d: string, n: number) => (n <= 7 ? DAY_SHORT[parseKey(d).getDay()]! : String(parseKey(d).getDate()));
 
-export function sessionVolume(s: WorkoutSession) {
-  let sets = 0, reps = 0, volume = 0;
-  for (const e of s.exercises) for (const st of e.sets) if (st.done) { sets++; reps += st.reps; volume += st.reps * (st.weight ?? 0); }
-  return { sets, reps, volume, minutes: s.endedAt ? Math.round((s.endedAt - s.startedAt - s.pausedMs) / 60000) : 0 };
-}
-
-export function metricSeries(metric: string, days: string[], entries: FoodEntry[], sessions: WorkoutSession[], water: Record<string, number>, sleep: Record<string, number>, weights: { date: string; weightKg: number }[]) {
+export function metricSeries(metric: string, days: string[], entries: FoodEntry[], workouts: PlannedWorkout[], water: Record<string, number>, sleep: Record<string, number>, weights: { date: string; weightKg?: number }[]) {
   return days.map((d) => {
     const label = shortLabel(d, days.length);
-    const done = sessions.filter((s) => s.date === d && s.status === 'done');
+    const done = workouts.filter((w) => w.date === d && w.status === 'done' && !w.rest);
     switch (metric) {
       case 'kcal': case 'protein': case 'carbs': case 'fat': {
         const l = entries.filter((e) => e.date === d);
         return { date: d, label, value: l.length ? totalsOf(l)[metric as 'kcal'] : null };
       }
       case 'workouts': return { date: d, label, value: done.length };
-      case 'sets': return { date: d, label, value: done.reduce((m, s) => m + sessionVolume(s).sets, 0) };
-      case 'volume': return { date: d, label, value: done.reduce((m, s) => m + sessionVolume(s).volume, 0) };
-      case 'minutes': return { date: d, label, value: done.reduce((m, s) => m + sessionVolume(s).minutes, 0) };
+      case 'minutes': return { date: d, label, value: done.some((w) => w.durationMin) ? done.reduce((m, w) => m + (w.durationMin ?? 0), 0) : done.length ? null : 0 };
       case 'water': return { date: d, label, value: water[d] != null ? water[d]! / 1000 : null };
       case 'sleep': return { date: d, label, value: sleep[d] ?? null };
       case 'weight': return { date: d, label, value: weights.find((w) => w.date === d)?.weightKg ?? null };
@@ -44,8 +36,6 @@ export const METRICS: Record<string, { title: string; unit: string; adultOnly?: 
   carbs: { title: 'פחמימות', unit: 'ג׳' },
   fat: { title: 'שומנים', unit: 'ג׳' },
   workouts: { title: 'אימונים', unit: 'אימונים' },
-  sets: { title: 'סטים', unit: 'סטים' },
-  volume: { title: 'נפח אימון', unit: 'ק״ג' },
   minutes: { title: 'זמן פעילות', unit: 'דק׳' },
   water: { title: 'שתייה', unit: 'ליטר' },
   sleep: { title: 'שינה', unit: 'שעות' },

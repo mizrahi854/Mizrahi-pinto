@@ -15,8 +15,8 @@ export default function MetricDetail() {
   const st = useApp();
   const [n, setN] = useState(7);
   const days = daysFor(n);
-  const series = metricSeries(metric ?? 'kcal', days, st.entries, st.sessions, st.water, st.sleep, st.measurements);
-  const prev = metricSeries(metric ?? 'kcal', daysFor(n, days[0] ? daysFor(2, days[0])[0] : undefined), st.entries, st.sessions, st.water, st.sleep, st.measurements);
+  const series = metricSeries(metric ?? 'kcal', days, st.entries, st.workouts, st.water, st.sleep, st.measurements);
+  const prev = metricSeries(metric ?? 'kcal', daysFor(n, days[0] ? daysFor(2, days[0])[0] : undefined), st.entries, st.workouts, st.water, st.sleep, st.measurements);
   const a = aggregate(series), b = aggregate(prev);
   const target = metric === 'kcal' ? st.profile.calorieTarget : metric === 'protein' ? st.profile.proteinTarget : metric === 'water' ? st.profile.waterTargetMl / 1000 : undefined;
 

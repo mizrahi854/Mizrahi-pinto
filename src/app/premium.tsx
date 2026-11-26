@@ -10,37 +10,40 @@ import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-rea
 import { Logo, useScreenWidth } from '@/components/Brand';
 import { Button, IconButton, Row, Sheet, T, Tap, Badge } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
-import { DemoPlayer } from '@/components/DemoPlayer';
-import { EXERCISE_ART_ON_DARK } from '@/data/media';
+import { MUSCLE_ART } from '@/data/media';
 import { colors, fonts, radius, space, type } from '@/theme/tokens';
 import { haptic } from '@/lib/haptics';
 
 type Feature = { icon: IconName; title: string; desc: string };
 const PAGES: Feature[][] = [
   [
-    { icon: 'sparkle', title: 'מאמן AI אישי', desc: 'הוספת ארוחה בשפה חופשית, חלופות אימון וסיכומים. כל הצעה דורשת את אישורך לפני שנשמרת.' },
-    { icon: 'food', title: 'תפריט תזונה אישי', desc: 'תוכנית ארוחות שבועית לפי העדפות, זמן הכנה ואלרגיות.' },
-    { icon: 'dumbbell', title: 'תוכניות אימון מתקדמות', desc: 'תוכניות כמו PPL של 6 ימים, מותאמות לציוד ולזמינות שלך.' },
-    { icon: 'camera', title: 'זיהוי ארוחות מתמונה', desc: 'צילום ארוחה והצעת רכיבים וכמויות – תמיד כהערכה שאתה מאשר.' },
-    { icon: 'flag', title: 'תכנון שגרה ומעקב יעדים', desc: 'שגרה שבועית חכמה, תזכורות ויעדי התמדה.' },
-    { icon: 'chart', title: 'דוחות וסטטיסטיקות מתקדמות', desc: 'ניתוח מגמות רב-שבועי, דוח שבועי מורחב וייצוא.' },
+    { icon: 'camera', title: 'זיהוי מזון בתמונה', desc: 'צילום ארוחה והצעת רכיבים וכמויות לאישור שלך. ממתין לחיבור השירות – לא מוצגת הערכה מזויפת.' },
+    { icon: 'barcode', title: 'סריקת ברקודים', desc: 'סריקה וחיפוש במאגר מוצרים ישראליים (Open Food Facts).' },
+    { icon: 'calendar', title: 'תוכנית שבועית אישית', desc: 'אימונים, ארוחות ואירועים מראשון עד שבת – עם השוואה בין התכנון לביצוע.' },
+    { icon: 'dumbbell', title: 'ניהול תוכנית אימונים', desc: 'תבנית קבועה, שכפול לשבוע הבא, האימון הבא במסך הבית.' },
+    { icon: 'food', title: 'מצב מסעדה', desc: 'תכנון יציאה, בחירת מנה מראש, מנות ומסעדות מועדפות. הערכות מסומנות בבירור.' },
+    { icon: 'star', title: 'תוכנית שישי-שבת', desc: 'ארוחות משפחתיות, מאכלי שבת, רשימת קניות ושקט בשבת.' },
   ],
   [
-    { icon: 'cart', title: 'רשימת קניות חכמה', desc: 'איחוד רכיבים אוטומטי מהתכנון השבועי.' },
-    { icon: 'bell', title: 'התראות חכמות', desc: 'תזכורות שמתאימות לשגרה שלך, עם שעות שקטות.' },
-    { icon: 'trophy', title: 'אתגרים עם חברים', desc: 'אתגרי התמדה משותפים בהזמנה ובהסכמה.' },
+    { icon: 'bowl', title: 'המלצות ותכנון ארוחות', desc: 'מתכונים, תכנון ארוחות ורשימות קניות.' },
+    { icon: 'sparkle', title: 'מאמן אישי חכם', desc: 'הצעות לאישור שלך בלבד. יחובר בהמשך.' },
+    { icon: 'calc', title: 'מחשבונים מותאמי גיל', desc: 'BMI, BMR ו-TDEE למבוגרים, מחשבוני כמויות לכולם.' },
+    { icon: 'chart', title: 'דוחות וסטטיסטיקות', desc: 'מגמות, ממוצעים וסיכומים שבועיים.' },
+    { icon: 'trophy', title: 'ימים לניצחון', desc: 'אתגר התמדה עם רצפים והישגים.' },
+    { icon: 'bell', title: 'תזכורות חכמות', desc: 'לפי השגרה שלך, עם שעות שקטות ושבת.' },
+    { icon: 'list', title: 'ארוחות שמורות ללא הגבלה', desc: 'שמירה ושימוש חוזר בלחיצה.' },
   ],
 ];
 
-const BASIC = ['יומן תזונה בסיסי', 'אימונים בסיסיים', 'סטטיסטיקות כלליות'];
-const PREMIUM = ['כל הפיצ׳רים של Basic', 'מאמן AI אישי', 'תוכניות מתקדמות', 'דוחות וניתוח עומק'];
+const BASIC = ['יומן תזונה יומי', 'חיפוש מוצרים והזנה ידנית', 'היסטוריית ארוחות ומוצרים אחרונים', 'סיכום בסיסי', 'הזנה מספרית (למבוגרים במעקב קלוריות)'];
+const PREMIUM = ['כל מה שב-Basic', 'צילום, ברקוד ומצב מסעדה', 'תוכנית שבועית ושישי-שבת', 'דוחות, תזכורות חכמות ומאמן'];
 const TABLE: [string, string, string][] = [
-  ['יומן מזון והזנה ידנית', '✓', '✓'], ['חיפוש וגלריית מוצרים', '✓', '✓'], ['מחשבון מוצר וארוחה', '✓', '✓'], ['סיכום יומי ושבועי', '✓', '✓'],
-  ['תיעוד אימונים', '✓', '✓'], ['תזכורות בסיסיות', '✓', '✓'], ['תוכנית תזונה שבועית מותאמת', 'דוגמה', '✓'], ['תוכניות אימון מתקדמות', 'דוגמה', '✓'],
-  ['מאמן AI וצילום מזון', 'הדגמה', '✓'], ['רשימת קניות חכמה', 'חלקי', '✓'], ['דוחות מתקדמים', 'דוגמה', '✓'], ['אתגרים עם חברים', 'אישי', 'הרחבה'],
+  ['יומן יומי והזנה ידנית', '✓', '✓'], ['חיפוש מוצרים', '✓', '✓'], ['היסטוריה ומוצרים אחרונים', '✓', '✓'], ['סיכום בסיסי', '✓', '✓'],
+  ['הוספת קלוריות (מבוגרים)', '✓', '✓'], ['סריקת ברקוד', '—', '✓'], ['זיהוי מזון בתמונה (AI)', '—', 'בחיבור'], ['תוכנית שבועית ואימונים', '—', '✓'],
+  ['מצב מסעדה ושישי-שבת', '—', '✓'], ['דוחות ומחשבונים מתקדמים', '—', '✓'], ['תזכורות חכמות', '—', '✓'], ['ארוחות שמורות', 'עד 5', 'ללא הגבלה'],
 ];
 
-/** 51 Premium – purchase NOT connected (placeholder only: no charge, no entitlement) */
+/** Premium – purchase NOT connected (placeholder only: no charge, no entitlement). All features are open during development. */
 export default function Premium() {
   const insets = useSafeAreaInsets();
   const w = useScreenWidth();
@@ -66,7 +69,7 @@ export default function Premium() {
                 </Defs>
                 <Circle cx={130} cy={130} r={130} fill="url(#pg)" />
               </Svg>
-              <Image source={EXERCISE_ART_ON_DARK.ohp} style={{ width: 230, height: 230 }} contentFit="contain" accessibilityIgnoresInvertColors />
+              <Image source={MUSCLE_ART.shoulders} style={{ width: 230, height: 230 }} contentFit="contain" accessibilityIgnoresInvertColors />
             </Animated.View>
             <View style={styles.topRow}>
               <Logo />
@@ -138,8 +141,8 @@ export default function Premium() {
               </Animated.View>
             )}
 
-            <Text style={[styles.compareLabel, { marginTop: space.xl, marginBottom: 10 }]}>סרטון הדגמה</Text>
-            <DemoPlayer height={300} onSkip={() => router.push('/demo')} />
+            <Button title="המשך בחינם" variant="ghost" style={{ marginTop: space.xl }} onPress={() => goBack()} />
+            <T.Caption style={{ textAlign: 'center', marginTop: space.md }}>בשלב הפיתוח כל הפיצ׳רים פתוחים לבדיקה ללא תשלום. כפתור השדרוג לא מבצע רכישה.</T.Caption>
             <T.Caption style={{ textAlign: 'center', marginTop: space.md }}>כל כלי הבסיס נשארים חינמיים. אין הבטחה לתוצאות.</T.Caption>
           </View>
         </ScrollView>

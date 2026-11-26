@@ -6,15 +6,16 @@ import { useApp } from '@/store/useApp';
 import { addDays, dateKey, prettyDate, uid } from '@/lib/dates';
 import { space } from '@/theme/tokens';
 
-const SUGGESTED = ['להשלים את האימון המתוכנן', 'הליכה 30 דקות', 'לתעד את כל הארוחות', 'לשתות 2.5 ליטר', 'לישון 7 שעות', '10 דקות מתיחות', 'לתרגל טכניקה בתרגיל חדש'];
+const WORKOUT_TASK = 'להשלים את האימון המתוכנן';
+const SUGGESTED = [WORKOUT_TASK, 'הליכה 30 דקות', 'לתעד את שגרת היום', 'לשתות 2.5 ליטר', 'לישון 7 שעות', '10 דקות מתיחות', 'לקום בזמן'];
 
-/** 45 Create challenge */
+/** Create a challenge – consistency, habits, rest and activity (never food restriction or body comparison). */
 export default function NewChallenge() {
   const upsert = useApp((s) => s.upsertChallenge);
-  const [name, setName] = useState('Road to Victory');
+  const [name, setName] = useState('ימים לניצחון על אליאן');
   const [days, setDays] = useState(30);
-  const [partner, setPartner] = useState('');
-  const [tasks, setTasks] = useState<string[]>(['להשלים את האימון המתוכנן', 'לתעד את כל הארוחות']);
+  const [partner, setPartner] = useState('אליאן');
+  const [tasks, setTasks] = useState<string[]>([WORKOUT_TASK, 'לתעד את שגרת היום']);
   const [custom, setCustom] = useState('');
   const start = dateKey();
   const end = addDays(start, days - 1);
@@ -22,7 +23,7 @@ export default function NewChallenge() {
   return (
     <Screen title="אתגר חדש" footer={<Button title="יצירת האתגר" disabled={!name.trim() || !tasks.length} onPress={() => {
       const id = uid();
-      upsert({ id, name: name.trim(), startDate: start, endDate: end, partner: partner.trim() || undefined, partnerStatus: partner.trim() ? 'invited' : 'none', tasks: tasks.map((t) => ({ id: uid() + t.length, title: t })), log: {}, restDays: [], notes: {} });
+      upsert({ id, name: name.trim(), startDate: start, endDate: end, partner: partner.trim() || undefined, partnerStatus: partner.trim() ? 'invited' : 'none', tasks: tasks.map((t) => ({ id: uid() + t.length, title: t, ...(t === WORKOUT_TASK ? { auto: 'workout' as const } : {}) })), log: {}, restDays: [], notes: {} });
       toast('האתגר נוצר'); router.replace(`/victory/${id}`);
     }} />}>
       <Field label="שם האתגר" value={name} onChangeText={setName} />
@@ -32,12 +33,12 @@ export default function NewChallenge() {
       </Row>
       <Row style={{ marginBottom: space.md }}>{[14, 30, 60, 90].map((d) => <Chip key={d} label={`${d}`} active={days === d} onPress={() => setDays(d)} />)}</Row>
       <T.Caption style={{ marginBottom: space.md }}>מ-{prettyDate(start)} עד {end.split('-').reverse().join('.')}</T.Caption>
-      <Field label="שותף לאתגר (לא חובה) – למשל: אלירן" value={partner} onChangeText={setPartner} />
+      <Field label="מול מי (לא חובה)" value={partner} onChangeText={setPartner} />
       <T.Caption style={{ marginTop: -8, marginBottom: space.md }}>השותף יוזמן ויצטרף רק בהסכמה. משותף רק מה שתבחר לחשוף.</T.Caption>
       <T.H style={{ marginBottom: 8 }}>משימות יומיות</T.H>
       {tasks.map((t) => (
         <Card key={t} style={{ marginBottom: 6, paddingVertical: 8 }}>
-          <Row style={{ justifyContent: 'space-between' }}><T.Body style={{ flex: 1 }}>{t}</T.Body><IconButton icon="close" label={`הסר ${t}`} size={32} onPress={() => setTasks(tasks.filter((x) => x !== t))} /></Row>
+          <Row style={{ justifyContent: 'space-between' }}><T.Body style={{ flex: 1 }}>{t}</T.Body><IconButton icon="close" label={`הסר ${t}`} size={44} onPress={() => setTasks(tasks.filter((x) => x !== t))} /></Row>
         </Card>
       ))}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 8 }}>

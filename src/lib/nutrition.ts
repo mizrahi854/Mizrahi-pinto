@@ -84,3 +84,14 @@ export function defaultMacros(kcal: number, weightKg: number | null) {
 export const isAdult = (age: number | null | undefined) => typeof age === 'number' && age >= 18;
 
 export const fmt = (v: number | null | undefined, unit = '') => (v == null ? '—' : `${Math.round(v * 10) / 10}${unit}`);
+
+/** Adult BMI (WHO categories). Returns null under 18 – children need age/sex growth charts, not adult cut-offs. */
+export function bmiAdult(p: { age: number | null; heightCm: number | null; weightKg: number | null }) {
+  if (!isAdult(p.age) || !p.heightCm || !p.weightKg || p.heightCm < 120 || p.heightCm > 230 || p.weightKg < 30 || p.weightKg > 300) return null;
+  const v = Math.round((p.weightKg / (p.heightCm / 100) ** 2) * 10) / 10;
+  const category = v < 18.5 ? 'תת-משקל' : v < 25 ? 'טווח תקין' : v < 30 ? 'עודף משקל' : 'השמנה';
+  return { value: v, category };
+}
+
+/** Grams → how many of a portion (and back), rounded for display. */
+export const gramsToPortions = (grams: number, portionGrams: number) => (portionGrams > 0 ? Math.round((grams / portionGrams) * 100) / 100 : null);

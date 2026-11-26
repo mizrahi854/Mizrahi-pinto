@@ -6,12 +6,14 @@ import { dateKey, addDays, diffDays, weekOf, parseKey } from './dates';
 import { searchLocal , editDistance, norm } from './search';
 import { STARTER_FOODS } from '../data/foods';
 import { RECIPES } from '../data/recipes';
-import { EXERCISES, PLANS } from '../data/exercises';
 import { recipeNutrients } from './recipes';
-import { personalRecords } from './records';
 import { challengeStats } from './challenge';
-import { sessionVolume, aggregate } from './stats';
-import type { WorkoutSession, Challenge , FoodEntry } from '../data/types';
+import { aggregate } from './stats';
+import type { Challenge, FoodEntry, PlannedWorkout } from '../data/types';
+import { nextWorkout, missedWorkouts, fromTemplate, copyWeek, buildTemplate, whenLabel, workoutWeekStats } from './workouts';
+import { migrateState, tracksCalories } from '../store/defaults';
+import { TZAMERET_FOODS } from '../data/tzameret';
+import { parseMealText } from './describe';
 
 import { unitsFor, baseQuantity, computeFoodEntry, rescale, periodSummary, frequentFoodIds } from './engine';
 
@@ -83,29 +85,11 @@ test('recipes reference existing foods', () => {
   assert.equal(STARTER_FOODS.find((f) => f.id === 'f057')!.name, 'שיבולת שועל');
 });
 
-test('plans reference existing exercises and alternatives', () => {
-  for (const p of PLANS) for (const e of p.exercises) assert.ok(EXERCISES.some((x) => x.id === e.exerciseId), `${p.id} → ${e.exerciseId}`);
-  for (const e of EXERCISES) for (const a of e.alternatives) assert.ok(EXERCISES.some((x) => x.id === a), `${e.id} alt ${a}`);
-});
-
 test('search: Hebrew, English, prefix ranking', () => {
   const r = searchLocal(STARTER_FOODS, 'קוטג');
   assert.ok(r.length >= 3 && r[0]!.name.startsWith('קוטג'));
   assert.ok(searchLocal(STARTER_FOODS, 'banana')[0]!.name === 'בננה');
   assert.equal(searchLocal(STARTER_FOODS, 'zzzz').length, 0);
-});
-
-const session = (id: string, w: number, reps: number, t: number): WorkoutSession => ({
-  id, planId: 'push', name: 'Push', date: '2026-11-0' + t, startedAt: t * 1000, endedAt: t * 1000 + 3600000, pausedMs: 600000, status: 'done', current: 0,
-  exercises: [{ exerciseId: 'bench', target: { exerciseId: 'bench', sets: 2, repsMin: 8, repsMax: 10, restSec: 90 }, sets: [{ reps, weight: w, done: true }, { reps, weight: w, done: false }] }],
-});
-
-test('workout volume counts only completed sets; PRs pick the heaviest', () => {
-  const v = sessionVolume(session('a', 80, 10, 1));
-  assert.deepEqual([v.sets, v.reps, v.volume, v.minutes], [1, 10, 800, 50]);
-  const pr = personalRecords([session('a', 80, 10, 1), session('b', 85, 6, 2), session('c', 85, 8, 3)]);
-  assert.equal(pr[0]!.weight, 85);
-  assert.equal(pr[0]!.reps, 8);
 });
 
 test('challenge: rest days do not break streak, no punishment', () => {
@@ -158,4 +142,89 @@ test('search: typo tolerance, finals, brand and barcode', () => {
   const withBrand = [{ ...STARTER_FOODS[0]!, id: 'x', name: 'יוגורט', brand: 'דנונה', barcode: '7290000000001' }];
   assert.equal(searchLocal(withBrand, 'דנונה').length, 1);
   assert.equal(searchLocal(withBrand, '72900000').length, 1);
+});
+
+const W = (id: string, date: string, time: string | null, extra: Partial<PlannedWorkout> = {}): PlannedWorkout => ({ id, date, time, name: id, muscles: ['chest'], status: 'planned', ...extra });
+
+test('workouts: next workout skips done/rest/old ones; missed ones are offered', () => {
+  const now = new Date(2026, 10, 26, 10, 0); // Thu 26 Nov 2026 10:00
+  const list = [
+    W('old', '2026-11-24', '05:00'),
+    W('done', '2026-11-26', '12:00', { status: 'done' }),
+    W('rest', '2026-11-26', null, { rest: true }),
+    W('tomorrow', '2026-11-27', '05:00'),
+    W('later', '2026-11-26', '18:00'),
+  ];
+  assert.equal(nextWorkout(list, now)?.id, 'later');
+  assert.deepEqual(missedWorkouts(list, now).map((w) => w.id), ['old']);
+  assert.equal(nextWorkout([W('a', '2026-11-26', '08:30')], now)?.id, 'a', 'still shown within 3h grace');
+  assert.equal(whenLabel(W('x', '2026-11-27', '05:00'), '2026-11-26'), 'מחר | 05:00 בבוקר');
+});
+
+test('workouts: template fills free days only; copy week resets status; stats', () => {
+  const t = buildTemplate([0, 2, 4], ['chest', 'biceps', 'back', 'triceps', 'legs'], '05:00');
+  assert.equal(t.length, 7);
+  assert.deepEqual(t.filter((x) => !x.rest).map((x) => x.name), ['חזה ויד קדמית', 'גב ויד אחורית', 'רגליים']);
+  const existing = [W('mine', '2026-11-22', '07:00')];
+  const filled = fromTemplate(t, '2026-11-22', existing);
+  assert.ok(!filled.some((w) => w.date === '2026-11-22'), 'does not overwrite a day the user planned');
+  assert.equal(filled.length, 6);
+  const copies = copyWeek([W('d', '2026-11-23', '05:00', { status: 'done' })], '2026-11-22');
+  assert.equal(copies[0]!.date, '2026-11-30');
+  assert.equal(copies[0]!.status, 'planned');
+  assert.deepEqual(workoutWeekStats([W('a', '2026-11-23', null, { status: 'done' }), W('b', '2026-11-24', null), W('r', '2026-11-25', null, { rest: true })], '2026-11-22'), { planned: 2, done: 1, skipped: 0 });
+});
+
+test('migration v1→v2 keeps entries and converts sessions, schedule and meal plan', () => {
+  const v1 = {
+    profile: { name: 'א', age: 30, targetMode: 'calculated', trainingTime: '05:00' },
+    entries: [{ id: 'e1', date: '2026-11-01', meal: 'lunch', name: 'x', amount: 1, unitLabel: 'מנה', grams: null, nutrients: { kcal: 100, protein: 1, carbs: 1, fat: 1 }, time: '12:00', createdAt: 1 }],
+    sessions: [{ id: 's1', planId: 'push', name: 'Push', date: '2026-11-02', startedAt: 0, endedAt: 3600000, pausedMs: 0, status: 'done', exercises: [] }, { id: 's2', planId: 'pull', date: '2026-11-03', status: 'active' }],
+    schedule: { 0: 'push', 1: 'rest', 2: 'pull' },
+    mealPlan: { '2026-11-05': { lunch: RECIPES[0]!.id } },
+    challenges: [{ id: 'c' }],
+  };
+  const v2 = migrateState(v1, 1);
+  assert.equal(v2.entries.length, 1);
+  assert.equal(v2.challenges.length, 1);
+  assert.equal(v2.workouts.length, 1);
+  assert.equal(v2.workouts[0].status, 'done');
+  assert.equal(v2.workouts[0].durationMin, 60);
+  assert.equal(v2.template[0].time, '05:00');
+  assert.ok(v2.template[1].rest);
+  assert.equal(v2.plannedMeals[0].title, RECIPES[0]!.name);
+  assert.equal(v2.sessions, undefined);
+  assert.equal(v2.profile.trackCalories, true);
+  assert.equal(tracksCalories({ age: 16, trackCalories: true, targetMode: 'calculated' }), false, 'minors never track calories');
+});
+
+test('Tzameret: official values, portions, Israeli & Shabbat dishes', () => {
+  assert.ok(TZAMERET_FOODS.length > 4000);
+  for (const f of TZAMERET_FOODS) {
+    assert.ok(f.per100 && f.per100.kcal != null && f.per100.kcal >= 0, f.name);
+    assert.equal(f.verified, true);
+  }
+  for (const q of ['חמין', 'קובה', 'חלה', 'קוסקוס', 'מפרום', 'גפילטע']) assert.ok(searchLocal(TZAMERET_FOODS, q).length > 0, q);
+  const egg = TZAMERET_FOODS.find((f) => f.name === 'ביצה שלמה בלי קליפה')!;
+  assert.ok(egg.portions.some((p) => p.label === 'יחידה בינונית' && p.grams === 49.5));
+});
+
+test('free-text meal description is matched locally (no AI) with quantities', () => {
+  const foods = [...STARTER_FOODS, ...TZAMERET_FOODS];
+  const r = parseMealText('2 ביצים, 150 גרם אורז וחצי פיתה', foods);
+  assert.equal(r.length, 3);
+  assert.equal(r[0]!.amount, 2);
+  assert.ok(r[0]!.food?.name.includes('ביצ'));
+  assert.equal(r[1]!.grams, 150);
+  assert.equal(r[2]!.amount, 0.5);
+  assert.ok(parseMealText('', foods).length === 0);
+  const unknown = parseMealText('קסםבלבל', foods);
+  assert.equal(unknown[0]!.food, null, 'no guess when nothing matches');
+});
+
+test('calculators: adult BMI only, portion conversion', async () => {
+  const { bmiAdult, gramsToPortions } = await import('./nutrition');
+  assert.deepEqual(bmiAdult({ age: 30, heightCm: 180, weightKg: 81 }), { value: 25, category: 'עודף משקל' });
+  assert.equal(bmiAdult({ age: 15, heightCm: 170, weightKg: 60 }), null, 'no adult BMI category for minors');
+  assert.equal(gramsToPortions(150, 49.5), 3.03);
 });

@@ -172,14 +172,14 @@ export const STARTER_FOODS: Food[] = (Object.keys(groups) as (keyof typeof group
 
 export const CATEGORY_LABELS: Record<FoodCategory, string> = {
   dairy: 'מוצרי חלב',
-  protein: 'חלבון ומשקאות',
+  protein: 'חלבון, קטניות ואגוזים',
   meat: 'בשר ודגים',
   eggs: 'ביצים וקטניות',
   carbs: 'פחמימות',
   bread: 'לחמים ודגנים',
   produce: 'פירות וירקות',
   fats: 'שומנים ותוספות',
-  meals: 'ארוחות ומשקאות',
+  meals: 'מנות ותבשילים',
   drinks: 'משקאות',
   snacks: 'חטיפים',
   custom: 'המוצרים שלי',

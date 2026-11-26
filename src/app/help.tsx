@@ -41,15 +41,22 @@ export default function Help() {
           <T.Muted>• נוסח משפטי מלא יפורסם לפני השקה.</T.Muted>
         </Card>
       </Section>
+      <Section title="מקורות מידע תזונתי">
+        <Card style={{ gap: 6 }}>
+          <T.Muted>• מאגר צמרת – מאגר הרכב המזון הלאומי של משרד הבריאות (data.gov.il, רישיון פתוח בציון המקור): ערכים ל-100 ג׳ ומשקלי מנות, כולל מאכלים ביתיים ומאכלי שבת. ערך של מתכון הוא ממוצע ועשוי להיות שונה מהמנה שלך.</T.Muted>
+          <T.Muted>• Open Food Facts – מוצרים ארוזים, ברקודים ותמונות אריזה שהוזנו על ידי הקהילה (ODbL, תמונות CC BY-SA). מסומנים ״לא מאומת״.</T.Muted>
+          <T.Muted>• ערכי ייחוס כלליים במאגר ההתחלתי – מסומנים ״לא מאומת״. ערך חסר מוצג כ״לא ידוע״ ולא כאפס.</T.Muted>
+        </Card>
+      </Section>
       <Section title="קרדיט תמונות">
         <Card style={{ gap: 6 }}>
-          <T.Muted>איורי תרגילים: Everkinetic (CC BY-SA 3.0). תמונות מזון: Wikimedia Commons. כל התמונות ברישיון חופשי לשימוש מסחרי.</T.Muted>
+          <T.Muted>איורי קבוצות שרירים: Everkinetic (CC BY-SA 3.0). תמונות מזון: Wikimedia Commons. כל התמונות ברישיון חופשי לשימוש מסחרי.</T.Muted>
           {(credits.credits as { file: string; title: string; author: string; license: string; source: string }[]).map((c) => (
             <T.Caption key={c.file}>{c.title.replace('File:', '')} · {c.author || 'לא צוין'} · {c.license}</T.Caption>
           ))}
         </Card>
       </Section>
-      <T.Caption style={{ textAlign: 'center', marginTop: space.lg }}>MIZRAHI PINTO · גרסה 1.1.0</T.Caption>
+      <T.Caption style={{ textAlign: 'center', marginTop: space.lg }}>MIZRAHI PINTO · גרסה 2.0.0</T.Caption>
     </Screen>
   );
 }

@@ -40,7 +40,7 @@ export default function Coach() {
           <Text style={[type.body, { color: colors.text }]}>המאמן עדיין לא זמין, ולכן לא נוצרה תשובה. אפשר לתעד ידנית:</Text>
           <Row style={{ marginTop: 8, flexWrap: 'wrap' }}>
             <Chip label="חיפוש מוצר" onPress={() => router.push('/foods')} />
-            <Chip label="בניית ארוחה" onPress={() => router.push('/meal-builder')} />
+            <Chip label="תיאור חופשי" onPress={() => router.push('/describe')} />
           </Row>
         </View>
       )}

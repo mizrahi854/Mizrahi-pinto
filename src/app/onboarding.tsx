@@ -4,18 +4,19 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInLeft, FadeOutRight, FadeIn, ZoomIn, useReducedMotion } from 'react-native-reanimated';
-import { useApp, defaultProfile , buildSchedule } from '@/store/useApp';
-import type { Profile } from '@/data/types';
+import { useApp, defaultProfile, SHABBAT_MEALS } from '@/store/useApp';
+import type { Profile, MuscleGroup, Reminder, ShabbatMealKey } from '@/data/types';
 import { Button, Chip, Field, IconButton, ProgressBar, T, Tap, Card, Row, toast } from '@/components/ui';
 import { Icon, IconName } from '@/components/Icon';
 import { RulerPicker } from '@/components/RulerPicker';
 import { DotNumber } from '@/components/DotMatrix';
 import { LogoMark, MAX_W } from '@/components/Brand';
 import { colors, space, type, radius } from '@/theme/tokens';
-import { DAY_SHORT, DAY_LONG } from '@/lib/dates';
+import { DAY_SHORT, DAY_LONG, uid } from '@/lib/dates';
 import { ACTIVITY_FACTORS, estimateMaintenance, defaultMacros, isAdult } from '@/lib/nutrition';
 import { haptic } from '@/lib/haptics';
-import { estimateMinutes, planById } from '@/data/exercises';
+import { buildTemplate, MUSCLE_LABELS } from '@/lib/workouts';
+import { scheduleReminder } from '@/lib/notifications';
 
 const GOALS: { id: string; label: string; icon: IconName }[] = [
   { id: 'strength', label: 'בניית כוח ושריר', icon: 'dumbbell' },
@@ -25,16 +26,18 @@ const GOALS: { id: string; label: string; icon: IconName }[] = [
   { id: 'health', label: 'אורח חיים בריא', icon: 'sparkle' },
   { id: 'weight', label: 'שינוי משקל (מבוגרים)', icon: 'weight' },
 ];
-const EQUIP = [
-  { id: 'gym', label: 'חדר כושר מלא' }, { id: 'dumbbell', label: 'משקולות יד' }, { id: 'band', label: 'גומיות' },
-  { id: 'bar', label: 'מוט מתח' }, { id: 'none', label: 'ללא ציוד' },
-];
+const HABITS = ['ארוחת בוקר קבועה', 'מדלג/ת על ארוחות', 'אוכל/ת מאוחר בערב', 'נשנושים בין הארוחות', 'אוכל/ת בחוץ הרבה', 'מבשל/ת בבית', 'ארוחות לא קבועות'];
+const ROUTINE: [Profile['experience'], string, string][] = [['advanced', 'מתאמן/ת באופן קבוע', 'יודע/ת מה לעשות באימון'], ['intermediate', 'חוזר/ת לשגרה', 'מתאמן/ת לסירוגין'], ['beginner', 'מתחיל/ה עכשיו', 'בונה שגרה מאפס']];
+const MUSCLES: MuscleGroup[] = ['chest', 'back', 'shoulders', 'legs', 'biceps', 'triceps', 'abs', 'cardio', 'full'];
+const WEEKEND = ['ארוחת שישי משפחתית', 'אימון בשישי בבוקר', 'שבת של מנוחה', 'בילוי/יציאות בסוף השבוע', 'עבודה או לימודים בשישי', 'ארוחות אצל המשפחה'];
+const RESTAURANT_FREQ: [NonNullable<Profile['restaurantFreq']>, string][] = [['rare', 'כמעט אף פעם'], ['monthly', 'פעם-פעמיים בחודש'], ['weekly', 'כל שבוע'], ['often', 'כמה פעמים בשבוע']];
+const NOTIFS: [string, string][] = [['workout', 'תזכורת לאימון הבא'], ['daily', 'תזכורת יומית'], ['did_train', '״התאמנת היום?״'], ['plan_week', 'תכנון השבוע (מוצ״ש)'], ['shabbat_prep', 'הכנת תוכנית שבת (חמישי)'], ['meal', 'תיעוד ארוחות'], ['restaurant', 'לפני יציאה למסעדה']];
 const PREFS = ['הכל', 'צמחוני', 'טבעוני', 'כשר', 'ללא גלוטן', 'דל לקטוז', 'עתיר חלבון', 'ארוחות מהירות'];
 const ALLERGIES = ['חלב', 'ביצים', 'בוטנים', 'אגוזים', 'שומשום', 'סויה', 'דגים', 'גלוטן'];
 
-type Step = 'name' | 'goals' | 'experience' | 'schedule' | 'food' | 'metrics' | 'target' | 'period' | 'building' | 'summary' | 'premium';
+type Step = 'name' | 'goals' | 'eating' | 'training' | 'routine' | 'weekend' | 'notifs' | 'tracking' | 'metrics' | 'target' | 'building' | 'summary' | 'premium';
 
-/** 06–13 Onboarding questionnaire (one question per screen, autosaves). */
+/** Personalisation questionnaire (one topic per screen, autosaves a draft). Ends with a plan preview + Premium offer. */
 export default function Onboarding() {
   const params = useLocalSearchParams<{ edit?: string }>();
   const editing = params.edit === '1';
@@ -50,8 +53,8 @@ export default function Onboarding() {
   const [p, setP] = useState<Profile>(() => ({ ...defaultProfile, ...(editing ? existing : {}), ...(editing ? {} : draft) }) as Profile);
   const adult = isAdult(p.age);
   const steps: Step[] = useMemo(
-    () => ['name', 'goals', 'experience', 'schedule', 'food', ...(adult ? (['metrics', 'target'] as Step[]) : []), 'period', 'building', 'summary', ...(editing ? [] : (['premium'] as Step[]))],
-    [adult, editing],
+    () => ['name', 'goals', 'eating', 'training', 'routine', 'weekend', 'notifs', ...(adult ? (['tracking'] as Step[]) : []), ...(adult && p.trackCalories ? (['metrics', 'target'] as Step[]) : []), 'building', 'summary', ...(editing ? [] : (['premium'] as Step[]))],
+    [adult, editing, p.trackCalories],
   );
   const [i, setI] = useState(() => Math.min(editing ? 0 : draft.step ?? 0, steps.length - 1));
   const step = steps[i]!;
@@ -67,7 +70,7 @@ export default function Onboarding() {
     switch (step) {
       case 'name': return p.name.trim().length >= 2 && p.age != null && p.age >= 10 && p.age <= 100;
       case 'goals': return p.goals.length > 0;
-      case 'schedule': return p.trainingDays.length > 0;
+      case 'training': return p.trainingDays.length > 0;
       default: return true;
     }
   })();
@@ -80,17 +83,40 @@ export default function Onboarding() {
   };
   const back = () => (i === 0 ? (editing ? goBack('/(tabs)/profile') : goBack('/welcome')) : setI(i - 1));
 
-  const finish = () => {
+  const finish = async () => {
     const final: Profile = { ...p, workoutsPerWeek: p.trainingDays.length };
-    if (!adult) Object.assign(final, { targetMode: 'none', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null, heightCm: null, weightKg: null });
+    if (!adult || !p.trackCalories) Object.assign(final, { trackCalories: false, targetMode: 'none', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null });
+    if (!adult) Object.assign(final, { heightCm: null, weightKg: null });
+    const template = buildTemplate(final.trainingDays, final.muscleGroups ?? [], final.trainingTime || null);
+    // Shabbat plan from the answers
+    const sh = useApp.getState().shabbat;
+    useApp.getState().updateShabbat({ meals: sh.meals.map((m) => ({ ...m, enabled: (final.shabbatMeals ?? []).includes(m.key) })) });
+    // reminders from the chosen notification preferences (existing ones of the same type are kept)
+    const existingTypes = new Set(useApp.getState().reminders.map((r) => r.type));
+    const all = [0, 1, 2, 3, 4, 5, 6];
+    const mk = (type: Reminder['type'], title: string, time: string, days: number[]): Reminder => ({ id: uid(), type, title, time, days, enabled: true, sound: 'default' });
+    const want: Reminder[] = [];
+    const prefs = final.notifPrefs ?? [];
+    const before = (t: string) => { const [h, m] = t.split(':').map(Number); const v = Math.max(0, (h ?? 0) * 60 + (m ?? 0) - 60); return `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`; };
+    if (prefs.includes('workout')) want.push(mk('workout', 'האימון הבא שלך', before(final.trainingTime || '18:00'), final.trainingDays));
+    if (prefs.includes('daily')) want.push(mk('daily', 'תזכורת יומית', final.wakeTime || '07:00', all));
+    if (prefs.includes('did_train')) want.push(mk('did_train', 'התאמנת היום?', '20:30', final.trainingDays));
+    if (prefs.includes('plan_week')) want.push(mk('plan_week', 'תכנון השבוע', '20:00', [6]));
+    if (prefs.includes('shabbat_prep')) want.push(mk('shabbat_prep', 'הכנת תוכנית שישי-שבת', '18:00', [4]));
+    if (prefs.includes('meal')) want.push(mk('meal', 'תיעוד ארוחות', '13:30', all));
+    const opts = { muted: useApp.getState().settings.muted, muteShabbat: useApp.getState().shabbat.muteDuringShabbat };
+    for (const r of want.filter((x) => !existingTypes.has(x.type))) {
+      const ids = await scheduleReminder(r, opts).catch(() => []);
+      useApp.getState().upsertReminder({ ...r, notificationIds: ids });
+    }
     if (editing) {
       updateProfile(final);
       setTargets({ targetMode: final.targetMode, calorieTarget: final.calorieTarget, proteinTarget: final.proteinTarget, carbsTarget: final.carbsTarget, fatTarget: final.fatTarget });
-      useApp.setState({ schedule: buildSchedule(final) });
+      useApp.getState().applyTemplate(template);
       toast('התוכנית עודכנה');
       goBack();
     } else {
-      complete(final);
+      complete(final, template);
       router.replace('/(tabs)');
     }
   };
@@ -139,21 +165,23 @@ export default function Onboarding() {
                 ))}
               </>
             )}
-            {step === 'experience' && (
+            {step === 'eating' && (
               <>
-                <Q title="מה רמת הניסיון שלך?" />
-                {([['beginner', 'מתחיל', 'פחות מחצי שנה של אימונים'], ['intermediate', 'בינוני', 'מתאמן באופן קבוע'], ['advanced', 'מתקדם', 'כמה שנים של אימונים']] as const).map(([id, l, d]) => (
-                  <Option key={id} icon="bolt" label={l} desc={d} selected={p.experience === id} onPress={() => set({ experience: id })} radio />
-                ))}
-                <Q title="איזה ציוד זמין לך?" small />
-                <View style={styles.wrapRow}>
-                  {EQUIP.map((e) => <Chip key={e.id} label={e.label} active={p.equipment.includes(e.id)} onPress={() => set({ equipment: e.id === 'none' ? ['none'] : toggle(p.equipment.filter((x) => x !== 'none'), e.id) })} />)}
-                </View>
+                <Q title="הרגלי תזונה" sub="בלי שיפוט – רק כדי להתאים את התוכנית. אפשר לבחור כמה." />
+                <View style={styles.wrapRow}>{HABITS.map((x) => <Chip key={x} label={x} active={(p.eatingHabits ?? []).includes(x)} onPress={() => set({ eatingHabits: toggle(p.eatingHabits ?? [], x) })} />)}</View>
+                <Q title="העדפות מזון" small />
+                <View style={styles.wrapRow}>{PREFS.map((x) => <Chip key={x} label={x} active={p.foodPrefs.includes(x)} onPress={() => set({ foodPrefs: toggle(p.foodPrefs, x) })} />)}</View>
+                <Q title="רגישויות ואלרגיות" small />
+                <View style={styles.wrapRow}>{ALLERGIES.map((x) => <Chip key={x} label={x} active={p.allergies.includes(x)} onPress={() => set({ allergies: toggle(p.allergies, x) })} />)}</View>
               </>
             )}
-            {step === 'schedule' && (
+            {step === 'training' && (
               <>
-                <Q title="באילו ימים נוח לך להתאמן?" sub={`נבחרו ${p.trainingDays.length} אימונים בשבוע`} />
+                <Q title="שגרת האימונים שלך" />
+                {ROUTINE.map(([id, l, d]) => <Option key={id} icon="bolt" label={l} desc={d} selected={p.experience === id} onPress={() => set({ experience: id })} radio />)}
+                <Q title="אילו קבוצות שרירים אתה מאמן?" sub="נבנה מהן חלוקה שבועית (למשל חזה ויד קדמית / גב ויד אחורית)." small />
+                <View style={styles.wrapRow}>{MUSCLES.map((m) => <Chip key={m} label={MUSCLE_LABELS[m]} active={(p.muscleGroups ?? []).includes(m)} onPress={() => set({ muscleGroups: toggle(p.muscleGroups ?? [], m) })} />)}</View>
+                <Q title="ימי אימון" sub={`נבחרו ${p.trainingDays.length} אימונים בשבוע`} small />
                 <View style={styles.days}>
                   {DAY_SHORT.map((d, idx) => (
                     <Tap key={d} onPress={() => set({ trainingDays: toggle(p.trainingDays, idx).sort() })} label={`יום ${DAY_LONG[idx]}`} role="checkbox">
@@ -163,21 +191,42 @@ export default function Onboarding() {
                     </Tap>
                   ))}
                 </View>
-                <Q title="מתי בדרך כלל?" small />
-                <View style={styles.wrapRow}>
-                  {['06:00', '08:00', '12:00', '17:00', '18:00', '20:00'].map((t) => <Chip key={t} label={t} active={p.trainingTime === t} onPress={() => set({ trainingTime: t })} />)}
-                </View>
+                <Q title="שעת אימון" small />
+                <View style={styles.wrapRow}>{['05:00', '06:00', '07:00', '12:00', '17:00', '18:00', '19:00', '20:00', '21:00'].map((t) => <Chip key={t} label={t} active={p.trainingTime === t} onPress={() => set({ trainingTime: t })} />)}</View>
               </>
             )}
-            {step === 'food' && (
+            {step === 'routine' && (
               <>
-                <Q title="העדפות מזון" />
-                <View style={styles.wrapRow}>{PREFS.map((x) => <Chip key={x} label={x} active={p.foodPrefs.includes(x)} onPress={() => set({ foodPrefs: toggle(p.foodPrefs, x) })} />)}</View>
-                <Q title="אלרגיות" small />
-                <View style={styles.wrapRow}>{ALLERGIES.map((x) => <Chip key={x} label={x} active={p.allergies.includes(x)} onPress={() => set({ allergies: toggle(p.allergies, x) })} />)}</View>
-                <Q title="מגבלות פעילות או פציעות" small />
-                <Field label="לא חובה" value={p.limitations} onChangeText={(limitations) => set({ limitations })} placeholder="למשל: כאב בברך שמאל" multiline />
-                <T.Caption>במקרה של כאב או פציעה מומלץ להתייעץ עם איש מקצוע. האפליקציה אינה תחליף לייעוץ רפואי.</T.Caption>
+                <Q title="שעת קימה" />
+                <View style={styles.wrapRow}>{['04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '09:00'].map((t) => <Chip key={t} label={t} active={p.wakeTime === t} onPress={() => set({ wakeTime: t })} />)}</View>
+                <Q title="שעות עבודה או לימודים" sub="כדי שתזכורות ואימונים לא יתנגשו." small />
+                <Row style={{ justifyContent: 'space-between' }}><T.Muted>מ-</T.Muted><View style={[styles.wrapRow, { flex: 1, marginStart: 8 }]}>{['07:00', '08:00', '09:00', '10:00'].map((t) => <Chip key={t} label={t} active={p.workStart === t} onPress={() => set({ workStart: t })} />)}</View></Row>
+                <Row style={{ justifyContent: 'space-between', marginTop: 8 }}><T.Muted>עד</T.Muted><View style={[styles.wrapRow, { flex: 1, marginStart: 8 }]}>{['14:00', '16:00', '17:00', '18:00', '19:00'].map((t) => <Chip key={t} label={t} active={p.workEnd === t} onPress={() => set({ workEnd: t })} />)}</View></Row>
+                <Chip label="אין שעות קבועות" active={!p.workStart && !p.workEnd} onPress={() => set({ workStart: undefined, workEnd: undefined })} />
+              </>
+            )}
+            {step === 'weekend' && (
+              <>
+                <Q title="שגרת סוף השבוע" sub="אפשר לבחור כמה." />
+                <View style={styles.wrapRow}>{WEEKEND.map((x) => <Chip key={x} label={x} active={(p.weekendRoutine ?? []).includes(x)} onPress={() => set({ weekendRoutine: toggle(p.weekendRoutine ?? [], x) })} />)}</View>
+                <Q title="ארוחות שישי ושבת" sub="ייכנסו לתוכנית שישי-שבת שלך." small />
+                {SHABBAT_MEALS.map((m) => <Option key={m.key} icon="star" label={m.label} selected={(p.shabbatMeals ?? []).includes(m.key)} onPress={() => set({ shabbatMeals: toggle<ShabbatMealKey>(p.shabbatMeals ?? [], m.key) })} />)}
+                <Q title="כמה פעמים אתה יוצא למסעדות?" small />
+                {RESTAURANT_FREQ.map(([k, l]) => <Option key={k} icon="food" label={l} selected={p.restaurantFreq === k} onPress={() => set({ restaurantFreq: k })} radio />)}
+              </>
+            )}
+            {step === 'notifs' && (
+              <>
+                <Q title="אילו תזכורות מתאימות לך?" sub="אפשר לשנות בכל רגע. אין התראות בשבת אם תבחר בכך." />
+                {NOTIFS.map(([k, l]) => <Option key={k} icon="bell" label={l} selected={(p.notifPrefs ?? []).includes(k)} onPress={() => set({ notifPrefs: toggle(p.notifPrefs ?? [], k) })} />)}
+                <T.Caption style={{ marginTop: 8 }}>בגרסת האתר באייפון התזכורות מוצגות בתוך האפליקציה בלבד (מגבלה של iOS לאתרים).</T.Caption>
+              </>
+            )}
+            {step === 'tracking' && (
+              <>
+                <Q title="לספור קלוריות?" sub="בחירה שלך. אפשר לשנות בכל עת." />
+                <Option icon="flame" label="כן, מעקב קלוריות" desc="קלוריות, חלבון, פחמימות ושומן + אפשרות ״הוסף קלוריות״" selected={!!p.trackCalories} onPress={() => set({ trackCalories: true })} radio />
+                <Option icon="bowl" label="לא, רק יומן ארוחות והרגלים" desc="בלי מספרים – רק מה אכלתי ומתי" selected={!p.trackCalories} onPress={() => set({ trackCalories: false, targetMode: 'none', calorieTarget: null, proteinTarget: null, carbsTarget: null, fatTarget: null })} radio />
               </>
             )}
             {step === 'metrics' && (
@@ -219,25 +268,17 @@ export default function Onboarding() {
                 )}
               </>
             )}
-            {step === 'period' && (
-              <>
-                <Q title="תקופת תכנון" sub="זו תקופת תכנון ומעקב – לא הבטחה לשינוי גופני בזמן קבוע." />
-                {([30, 60, 90] as const).map((d) => (
-                  <Option key={d} icon="calendar" label={`${d} ימים`} selected={p.planDays === d} onPress={() => set({ planDays: d })} radio />
-                ))}
-              </>
-            )}
             {step === 'building' && <Building />}
             {step === 'summary' && <Summary p={p} />}
             {step === 'premium' && (
               <>
                 <View style={{ alignItems: 'center', marginTop: space.lg }}><Icon name="crown" size={48} /></View>
                 <T.Title style={{ textAlign: 'center', marginTop: 8 }}>Premium – בקרוב</T.Title>
-                <T.Muted style={{ textAlign: 'center', marginTop: 6 }}>תוכנית ארוחות מותאמת, מאמן AI, דוחות מתקדמים ותוכניות אימון מתקדמות. כרגע ללא רכישה.</T.Muted>
-                {['תוכנית תזונה שבועית מותאמת', 'תוכניות אימון מתקדמות', 'מאמן AI וזיהוי ארוחה מתמונה', 'דוחות וניתוח מגמות'].map((x) => (
-                  <Row key={x} style={{ marginTop: space.sm }}><Icon name="check" size={18} /><T.Body>{x}</T.Body></Row>
+                <T.Muted style={{ textAlign: 'center', marginTop: 6 }}>כרגע ללא רכישה וללא חיוב. כל מה שבתוכנית שלך זמין לך עכשיו.</T.Muted>
+                {['זיהוי מזון מתמונה (AI) – כשהשירות יחובר', 'תוכנית שבועית מותאמת ותוכנית שישי-שבת', 'מצב מסעדה ומאמן אישי חכם', 'דוחות, מחשבונים מתקדמים ותזכורות חכמות', 'ארוחות שמורות ללא הגבלה ורשימות קניות'].map((x) => (
+                  <Row key={x} style={{ marginTop: space.sm }}><Icon name="check" size={18} /><T.Body style={{ flex: 1 }}>{x}</T.Body></Row>
                 ))}
-                <Button title="פרטים על Premium" variant="ghost" style={{ marginTop: space.xl }} onPress={() => { finish(); router.push('/premium'); }} />
+                <Button title="פרטים על Premium" variant="ghost" style={{ marginTop: space.xl }} onPress={async () => { await finish(); router.push('/premium'); }} />
               </>
             )}
           </Animated.View>
@@ -294,7 +335,7 @@ function Building() {
     const t = setInterval(() => setN((x) => Math.min(100, x + 4)), 90);
     return () => clearInterval(t);
   }, []);
-  const lines = ['מנתח את התשובות שלך', 'בונה לוח אימונים שבועי', 'מתאים העדפות ארוחות', 'מכין תזכורות'];
+  const lines = ['מנתח את התשובות שלך', 'בונה תוכנית אימונים שבועית', 'מכין תוכנית שישי-שבת', 'מכין תזכורות'];
   return (
     <View style={{ alignItems: 'center', paddingTop: 80, gap: 18 }}>
       <Animated.View entering={ZoomIn}><LogoMark size={64} /></Animated.View>
@@ -308,33 +349,33 @@ function Building() {
 }
 
 function Summary({ p }: { p: Profile }) {
-  const sched = buildSchedule(p);
+  const tmpl = buildTemplate(p.trainingDays, p.muscleGroups ?? [], p.trainingTime || null);
+  const calories = isAdult(p.age) && !!p.trackCalories;
   return (
     <>
-      <Q title={`${p.name || 'התוכנית שלך'}, זו התוכנית`} sub={`תקופת תכנון: ${p.planDays} ימים · ${p.trainingDays.length} אימונים בשבוע`} />
+      <Q title={`${p.name || 'התוכנית שלך'}, זו התוכנית הראשונית`} sub="תצוגה מקדימה – הכל ניתן לעריכה מהתוכנית השבועית ומהפרופיל." />
       <Card style={{ gap: 10 }}>
-        <T.H>שבוע לדוגמה</T.H>
-        {Object.entries(sched).map(([d, id]) => {
-          const plan = id !== 'rest' ? planById(id) : undefined;
-          return (
-            <Row key={d} style={{ justifyContent: 'space-between' }}>
-              <T.Body>{DAY_LONG[Number(d)]}</T.Body>
-              <T.Muted style={{ color: plan ? colors.accentLight : colors.text3 }}>{plan ? `${plan.name} · ~${estimateMinutes(plan)} דק׳` : 'מנוחה'}</T.Muted>
-            </Row>
-          );
-        })}
+        <T.H>שבוע אימונים</T.H>
+        {tmpl.map((t) => (
+          <Row key={t.day} style={{ justifyContent: 'space-between' }}>
+            <T.Body>{DAY_LONG[t.day]}</T.Body>
+            <T.Muted style={{ color: t.rest ? colors.text3 : colors.accentLight }}>{t.rest ? 'מנוחה' : `${t.name}${t.time ? ` · ${t.time}` : ''}`}</T.Muted>
+          </Row>
+        ))}
       </Card>
       <Card style={{ marginTop: space.md, gap: 6 }}>
         <T.H>תזונה</T.H>
-        <T.Muted>{p.targetMode === 'none' || !isAdult(p.age) ? 'מעקב ארוחות ללא תקציב קלוריות.' : `יעד יומי: ${p.calorieTarget?.toLocaleString()} קק״ל · חלבון ${p.proteinTarget} ג׳`}</T.Muted>
-        {p.foodPrefs.length > 0 && <T.Muted>העדפות: {p.foodPrefs.join(', ')}</T.Muted>}
-        {p.allergies.length > 0 && <T.Muted>אלרגיות: {p.allergies.join(', ')}</T.Muted>}
+        <T.Muted>{calories ? (p.calorieTarget ? `מעקב קלוריות · יעד יומי ${p.calorieTarget.toLocaleString()} קק״ל · חלבון ${p.proteinTarget} ג׳` : 'מעקב קלוריות ללא יעד') : 'יומן ארוחות והרגלים, בלי מספרים.'}</T.Muted>
+        {p.allergies.length > 0 && <T.Muted>רגישויות: {p.allergies.join(', ')}</T.Muted>}
       </Card>
       <Card style={{ marginTop: space.md, gap: 6 }}>
-        <T.H>הרגלים</T.H>
-        <T.Muted>שתייה: {(p.waterTargetMl / 1000).toFixed(1)} ליטר ביום · תזכורת אימון ב-{p.trainingTime}</T.Muted>
+        <T.H>שישי ושבת</T.H>
+        <T.Muted>{(p.shabbatMeals ?? []).length ? SHABBAT_MEALS.filter((m) => p.shabbatMeals!.includes(m.key)).map((m) => m.label).join(' · ') : 'ללא ארוחות קבועות'}</T.Muted>
       </Card>
-      <T.Caption style={{ marginTop: space.md }}>הכל ניתן לעריכה בכל עת מהפרופיל.</T.Caption>
+      <Card style={{ marginTop: space.md, gap: 6 }}>
+        <T.H>תזכורות</T.H>
+        <T.Muted>{(p.notifPrefs ?? []).length ? NOTIFS.filter(([k]) => p.notifPrefs!.includes(k)).map(([, l]) => l).join(' · ') : 'ללא תזכורות'}{p.wakeTime ? ` · קימה ${p.wakeTime}` : ''}</T.Muted>
+      </Card>
     </>
   );
 }

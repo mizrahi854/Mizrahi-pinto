@@ -25,10 +25,15 @@ export default function RootLayout() {
   const [loaded] = useFonts({ Heebo_300Light, Heebo_400Regular, Heebo_500Medium, Heebo_600SemiBold, Heebo_700Bold });
   useAuthListener();
   const sessionMode = useApp((s) => s.session?.mode);
+  const hydrated = useApp((s) => s.hydrated);
   useEffect(() => {
     initNotifications();
     return startSync();
   }, []);
+  // fill this week and next week from the recurring workout template / Shabbat plan (idempotent)
+  useEffect(() => {
+    if (hydrated) useApp.getState().ensureWeeks();
+  }, [hydrated]);
   useEffect(() => {
     if (sessionMode === 'supabase') pullOnLogin().catch(() => {});
   }, [sessionMode]);
@@ -49,7 +54,8 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{ animation: 'fade' }} />
             <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
             <Stack.Screen name="quick-add" options={{ presentation: 'transparentModal', animation: 'fade' }} />
-            <Stack.Screen name="workout/active" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="add-meal" options={{ presentation: 'transparentModal', animation: 'fade' }} />
+            <Stack.Screen name="add-calories" options={{ presentation: 'transparentModal', animation: 'fade' }} />
           </Stack>
         ) : (
           <View style={styles.root} />

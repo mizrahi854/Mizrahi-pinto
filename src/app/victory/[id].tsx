@@ -12,7 +12,7 @@ import { addDays, dateKey, diffDays, parseKey } from '@/lib/dates';
 import { colors, fonts, radius, space, type } from '@/theme/tokens';
 import { haptic } from '@/lib/haptics';
 
-/** 46 Challenge details & progress */
+/** Challenge: countdown, daily tasks (workout task ticks itself from the plan), streak, achievements, history. */
 export default function ChallengeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const reduce = useReducedMotion();
@@ -22,6 +22,8 @@ export default function ChallengeDetail() {
   const upsert = useApp((s) => s.upsertChallenge);
   const del = useApp((s) => s.deleteChallenge);
   const [editDate, setEditDate] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const workoutsDone = useApp((s) => (c ? s.workouts.filter((w) => w.status === 'done' && !w.rest && w.date >= c.startDate && w.date <= c.endDate).length : 0));
   const [note, setNote] = useState('');
   const [celebrate, setCelebrate] = useState(false);
   if (!c) return <Screen title="אתגר"><Empty title="האתגר לא נמצא" /></Screen>;
@@ -47,7 +49,7 @@ export default function ChallengeDetail() {
         </Animated.View>
       )}
       <Card>
-        <Row><Stat value={String(s.streak)} label="רצף" icon="bolt" /><Stat value={String(s.activeDays)} label="ימים פעילים" icon="calendar" /><Stat value={String(s.points)} label="נקודות" icon="star" /></Row>
+        <Row><Stat value={String(s.streak)} label="רצף" icon="bolt" /><Stat value={String(s.activeDays)} label="ימי התמדה" icon="calendar" /><Stat value={String(workoutsDone)} label="אימונים" icon="dumbbell" /><Stat value={String(s.points)} label="נקודות" icon="star" /></Row>
       </Card>
 
       {!c.finished && (
@@ -55,17 +57,17 @@ export default function ChallengeDetail() {
           {isRest ? <Card><T.Body>יום מנוחה – גם זה חלק מהתוכנית.</T.Body></Card> : c.tasks.map((t) => {
             const done = doneToday.includes(t.id);
             return (
-              <Tap key={t.id} onPress={() => onToggle(t.id)} label={`${t.title}${done ? ', בוצע' : ''}`} role="checkbox">
+              <Tap key={t.id} onPress={() => onToggle(t.id)} label={`${t.title}${done ? ', בוצע' : ''}${t.auto === 'workout' ? '. מסומן אוטומטית כשמשלימים אימון' : ''}`} role="checkbox">
                 <View style={[styles.task, done && styles.taskDone]}>
                   <View style={[styles.check, done && styles.checkOn]}>{done && <Icon name="check" size={16} color={colors.textOnAccent} strokeWidth={2.6} />}</View>
-                  <Text style={[type.bodyMedium, { color: colors.text, flex: 1 }]}>{t.title}</Text>
+                  <Text style={[type.bodyMedium, { color: colors.text, flex: 1 }]}>{t.title}{t.auto === 'workout' ? <Text style={{ color: colors.text2, fontSize: 12 }}>  · אוטומטי מהתוכנית</Text> : null}</Text>
                 </View>
               </Tap>
             );
           })}
           <Row style={{ marginTop: 8 }}>
             <Button style={{ flex: 1 }} title={isRest ? 'ביטול יום מנוחה' : 'יום מנוחה'} variant="ghost" icon="moon" onPress={() => toggleRest(c.id, today)} />
-            <Button style={{ flex: 1 }} title="עריכת תאריך" variant="ghost" icon="calendar" onPress={() => setEditDate(true)} />
+            <Button style={{ flex: 1 }} title="שם ותאריך יעד" variant="ghost" icon="edit" onPress={() => { setNameDraft(c.name); setEditDate(true); }} />
           </Row>
         </Section>
       )}
@@ -117,10 +119,11 @@ export default function ChallengeDetail() {
         </Card>
       )}
 
-      <Sheet visible={editDate} onClose={() => setEditDate(false)} title="תאריך סיום">
+      <Sheet visible={editDate} onClose={() => setEditDate(false)} title="שם האתגר ותאריך היעד">
+        <Field label="שם האתגר" value={nameDraft} onChangeText={setNameDraft} onBlur={() => { if (nameDraft.trim().length >= 2) upsert({ ...c, name: nameDraft.trim() }); }} />
         <Stepper label="ימים שנותרו" value={Math.max(0, diffDays(today, c.endDate))} min={0} max={365} onChange={(v) => upsert({ ...c, endDate: addDays(today, v) })} unit="ימים" />
         <T.Caption style={{ textAlign: 'center', marginTop: 8 }}>סיום: {c.endDate.split('-').reverse().join('.')}</T.Caption>
-        <Button title="סגירה" style={{ marginTop: space.md }} onPress={() => setEditDate(false)} />
+        <Button title="שמירה" style={{ marginTop: space.md }} onPress={() => { if (nameDraft.trim().length >= 2) upsert({ ...c, name: nameDraft.trim() }); setEditDate(false); toast('נשמר'); }} />
       </Sheet>
     </HeroScreen>
   );

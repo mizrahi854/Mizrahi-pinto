@@ -7,6 +7,7 @@ import { LightScreen, LCard, LIconButton, ls } from '@/components/light';
 import { Tap, Sheet, Field, Button, toast } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { RulerPicker } from '@/components/RulerPicker';
+import { useLogTarget } from '@/store/selectors';
 import { useApp, findFood } from '@/store/useApp';
 import { useMeals } from '@/store/selectors';
 import { CATEGORY_ICON, CATEGORY_LABELS } from '@/data/foods';
@@ -37,11 +38,12 @@ export default function FoodDetail() {
   const [amount, setAmount] = useState(unitIdx === 0 ? 100 : 1);
   const [text, setText] = useState(String(unitIdx === 0 ? 100 : 1));
   const [ruler, setRuler] = useState(false);
-  const [meal, setMeal] = useState(pMeal || defaultMeal());
+  const target = useLogTarget(pMeal, pDate);
+  const [meal, setMeal] = useState(target.meal);
   const [reporting, setReporting] = useState(false);
   const [reportText, setReportText] = useState('');
   const busy = useRef(false);
-  const date = pDate || dateKey();
+  const date = target.date;
 
   if (!food) {
     return <LightScreen title="מוצר"><Text style={[ls.body, { textAlign: 'center', marginTop: 30 }]}>המוצר לא נמצא</Text></LightScreen>;
@@ -78,7 +80,7 @@ export default function FoodDetail() {
     }
     addFoodToLog(food, amount, unit.label, meal, date, calc.grams);
     haptic.success();
-    toast(`${food.name} נוסף ל${meals.find((m) => m.key === meal)?.label ?? 'יומן'}`, { label: 'ליומן', onPress: () => router.push({ pathname: '/diary', params: { date } }) });
+    toast(`${food.name} נוסף ל${meals.find((m) => m.key === meal)?.label ?? 'יומן'}`, { label: 'ליומן', onPress: () => router.push({ pathname: '/(tabs)/diary', params: { date } }) });
     goBack();
   };
 
@@ -193,7 +195,6 @@ export default function FoodDetail() {
         {food.barcode ? <Text style={ls.caption}>ברקוד: {food.barcode}</Text> : null}
         <Text style={ls.caption}>מקור: {food.source}</Text>
         <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-          <Tap onPress={() => router.push({ pathname: '/compare', params: { a: food.id } })} label="השוואה"><Text style={styles.link}>השוואה</Text></Tap>
           <Tap onPress={() => setReporting(true)} label="דיווח על ערך שגוי"><Text style={styles.link}>דיווח על ערך שגוי</Text></Tap>
           {!food.isPrivate && <Tap onPress={() => router.push({ pathname: '/food-new', params: { from: food.id } })} label="עריכת עותק אישי"><Text style={styles.link}>עותק אישי</Text></Tap>}
         </View>

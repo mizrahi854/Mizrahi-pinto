@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { LightScreen, LCard, LPrimary, ls } from '@/components/light';
 import { Tap, toast } from '@/components/ui';
 import { Icon } from '@/components/Icon';
+import { useLogTarget } from '@/store/selectors';
 import { useApp, findFood } from '@/store/useApp';
 import { useMeals } from '@/store/selectors';
 import { computeFoodEntry, rescale, totalsOf } from '@/lib/engine';
@@ -28,8 +29,9 @@ export default function Basket() {
   const saveAsMeal = useApp((s) => s.saveBasketAsMeal);
   const adult = useApp((s) => isAdult(s.profile.age));
   const meals = useMeals();
-  const [meal, setMeal] = useState(defaultMeal());
-  const [date, setDate] = useState(dateKey());
+  const target = useLogTarget();
+  const [meal, setMeal] = useState(target.meal);
+  const [date, setDate] = useState(target.date);
   const [name, setName] = useState('');
   const [asOne, setAsOne] = useState(false);
   const busy = useRef(false);
@@ -52,7 +54,7 @@ export default function Basket() {
     busy.current = true;
     const n = logBasket({ meal, date, asOne: asOne ? name.trim() : undefined });
     haptic.success();
-    toast(asOne ? `"${name.trim()}" נוספה ליומן` : `${n} פריטים נוספו ליומן`, { label: 'ליומן', onPress: () => router.push({ pathname: '/diary', params: { date } }) });
+    toast(asOne ? `"${name.trim()}" נוספה ליומן` : `${n} פריטים נוספו ליומן`, { label: 'ליומן', onPress: () => router.push({ pathname: '/(tabs)/diary', params: { date } }) });
     setTimeout(() => { busy.current = false; }, 700);
     goBack();
   };

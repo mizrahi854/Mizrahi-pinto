@@ -40,9 +40,6 @@ export default function Welcome() {
           <Tap onPress={() => { continueLocal(); router.replace('/onboarding'); }} label="המשך בלי חשבון">
             <Text style={styles.link}>המשך בלי חשבון (שמירה במכשיר בלבד)</Text>
           </Tap>
-          <Tap onPress={() => router.push('/demo')} label="צפייה בהדגמה">
-            <Text style={[styles.link, { color: colors.accentLight }]}>צפייה בהדגמה</Text>
-          </Tap>
           {!supabaseConfigured && (
             <View style={{ alignItems: 'center', gap: 6, marginTop: 6 }}>
               <Badge text="מצב מקומי" tone="muted" />

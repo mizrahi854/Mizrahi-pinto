@@ -5,7 +5,7 @@ import { useApp } from '@/store/useApp';
  * Offline-first sync (Repository layer). Local store is the source of truth for the UI;
  * when a Supabase session exists, changes are pushed with idempotent upserts keyed by
  * client-generated ids, and remote rows are merged on login (last-write-wins by updated_at).
- * Covered now: profile, food entries (incl. deletions), workout sessions + sets, measurements,
+ * Covered now: profile, food entries (incl. deletions), planned workouts, measurements,
  * habits (water/sleep), favorites, reminders. Remaining tables are created and secured in the
  * migration and can be wired the same way.
  */
@@ -16,7 +16,7 @@ export function startSync() {
   if (!supabase) return () => {};
   const unsub = useApp.subscribe((s, prev) => {
     if (s.session?.mode !== 'supabase') return;
-    if (s.entries === prev.entries && s.sessions === prev.sessions && s.profile === prev.profile && s.measurements === prev.measurements && s.water === prev.water && s.favorites === prev.favorites && s.reminders === prev.reminders) return;
+    if (s.entries === prev.entries && s.workouts === prev.workouts && s.profile === prev.profile && s.measurements === prev.measurements && s.water === prev.water && s.favorites === prev.favorites && s.reminders === prev.reminders) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => push().catch(() => {}), 1500);
   });
@@ -37,7 +37,8 @@ async function push() {
   const ids = new Set(s.entries.map((e) => e.id));
   if (s.entries.length) {
     await sb.from('food_entries').upsert(s.entries.map((e) => ({
-      id: e.id, user_id: uid, entry_date: e.date, meal: e.meal, food_id: null, // catalogue ids are local until the food catalogue is seeded server-side; values are snapshotted name: e.name,
+      // food_id stays null: catalogue ids are local until the catalogue is seeded server-side; values are snapshotted
+      id: e.id, user_id: uid, entry_date: e.date, meal: e.meal, food_id: null, name: e.name,
       amount: e.amount, unit_label: e.unitLabel, grams: e.grams, kcal: e.nutrients.kcal, protein: e.nutrients.protein, carbs: e.nutrients.carbs,
       fat: e.nutrients.fat, fiber: e.nutrients.fiber ?? null, logged_time: e.time, deleted: false,
     })));
@@ -46,17 +47,13 @@ async function push() {
   if (removed.length) await sb.from('food_entries').update({ deleted: true }).in('id', removed);
   lastPushed.entries = ids;
 
-  const done = s.sessions.filter((x) => x.status === 'done');
-  if (done.length) {
-    await sb.from('workout_sessions').upsert(done.map((w) => ({
-      id: w.id, user_id: uid, plan_id: w.planId, name: w.name, session_date: w.date, started_at: new Date(w.startedAt).toISOString(),
-      ended_at: w.endedAt ? new Date(w.endedAt).toISOString() : null, paused_ms: w.pausedMs, status: w.status, notes: w.notes ?? null,
+  if (s.workouts.length) {
+    await sb.from('planned_workouts').upsert(s.workouts.map((w) => ({
+      id: w.id, user_id: uid, workout_date: w.date, workout_time: w.time, name: w.name, muscles: w.muscles, rest: !!w.rest,
+      duration_min: w.durationMin ?? null, notes: w.notes ?? null, status: w.status, done_at: w.doneAt ? new Date(w.doneAt).toISOString() : null,
     })));
-    await sb.from('workout_sets').upsert(done.flatMap((w) => w.exercises.flatMap((e) => e.sets.map((st, i) => ({
-      session_id: w.id, user_id: uid, exercise_id: e.exerciseId, set_index: i, reps: st.reps, weight_kg: st.weight, seconds: st.seconds ?? null, done: st.done,
-    })))), { onConflict: 'session_id,exercise_id,set_index' });
   }
-  if (s.measurements.length) await sb.from('measurements').upsert(s.measurements.map((m) => ({ user_id: uid, measured_on: m.date, weight_kg: m.weightKg })));
+  if (s.measurements.some((m) => m.weightKg != null)) await sb.from('measurements').upsert(s.measurements.filter((m) => m.weightKg != null).map((m) => ({ user_id: uid, measured_on: m.date, weight_kg: m.weightKg })));
   const habitDays = [...new Set([...Object.keys(s.water), ...Object.keys(s.sleep)])];
   if (habitDays.length) await sb.from('habit_logs').upsert(habitDays.map((d) => ({ user_id: uid, log_date: d, water_ml: s.water[d] ?? null, sleep_h: s.sleep[d] ?? null })));
   if (s.favorites.length) await sb.from('favorites').upsert(s.favorites.map((f) => ({ user_id: uid, food_id: f })));

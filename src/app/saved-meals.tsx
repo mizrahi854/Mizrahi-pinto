@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { LightScreen, LCard, ls } from '@/components/light';
 import { Tap, Sheet, Button, toast } from '@/components/ui';
 import { Icon } from '@/components/Icon';
+import { useLogTarget } from '@/store/selectors';
 import { useApp, allFoods } from '@/store/useApp';
 import { useMeals } from '@/store/selectors';
 import { totalsOf } from '@/lib/engine';
@@ -25,8 +26,9 @@ export default function SavedMeals() {
   const userFoods = useApp((s) => s.foods);
   const adult = useApp((s) => isAdult(s.profile.age));
   const meals = useMeals();
-  const [meal, setMeal] = useState(params.meal || defaultMeal());
-  const [date, setDate] = useState(params.date || dateKey());
+  const target = useLogTarget(params.meal, params.date);
+  const [meal, setMeal] = useState(target.meal);
+  const [date, setDate] = useState(target.date);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const favFoods = allFoods(userFoods).filter((f) => favorites.includes(f.id));
 
@@ -77,7 +79,7 @@ export default function SavedMeals() {
                   <Tap onPress={() => { toBasket(m.id); router.push('/basket'); }} label={`עריכת ${m.name} לפני הוספה`} style={{ flex: 1 }}>
                     <View style={styles.ghost}><Text style={styles.ghostText}>עריכה והוספה</Text></View>
                   </Tap>
-                  <Tap onPress={() => { log(m.id, meal, date); haptic.success(); toast(`${m.name} נוספה ל${meals.find((x) => x.key === meal)?.label} · ${prettyDate(date)}`, { label: 'ליומן', onPress: () => router.push({ pathname: '/diary', params: { date } }) }); }} label={`הוספת ${m.name}`} style={{ flex: 1.3 }}>
+                  <Tap onPress={() => { log(m.id, meal, date); haptic.success(); toast(`${m.name} נוספה ל${meals.find((x) => x.key === meal)?.label} · ${prettyDate(date)}`, { label: 'ליומן', onPress: () => router.push({ pathname: '/(tabs)/diary', params: { date } }) }); }} label={`הוספת ${m.name}`} style={{ flex: 1.3 }}>
                     <View style={styles.primary}><Icon name="plus" size={18} color="#fff" /><Text style={styles.primaryText}>הוספה</Text></View>
                   </Tap>
                 </View>

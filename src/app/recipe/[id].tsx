@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { goBack } from '@/lib/nav';
 import { View, Text } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Screen, Card, Row, T, Section, Button, Stepper, Chip, toast, Empty, Badge } from '@/components/ui';
 import { Icon } from '@/components/Icon';
+import { nutrientsFor } from '@/lib/nutrition';
 import { useApp } from '@/store/useApp';
 import { useMeals } from '@/store/selectors';
 import { recipeById } from '@/data/recipes';
@@ -19,7 +20,7 @@ export default function RecipeDetail() {
   const r = recipeById(id ?? '');
   const addEntry = useApp((s) => s.addEntry);
   const addShopping = useApp((s) => s.addShopping);
-  const setPlanned = useApp((s) => s.setPlanned);
+  const plan = useApp((s) => s.upsertPlannedMeal);
   const adult = useApp((s) => isAdult(s.profile.age));
   const meals = useMeals();
   const [servings, setServings] = useState(1);
@@ -69,7 +70,12 @@ export default function RecipeDetail() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>{meals.map((m) => <Chip key={m.key} label={m.label} active={meal === m.key} onPress={() => setMeal(m.key)} />)}</View>
         <Row style={{ marginTop: space.md }}>
           <Button style={{ flex: 1 }} title="לרשימת קניות" icon="cart" variant="ghost" onPress={() => { addShopping(shoppingItemsFor(r)); toast('נוסף לרשימת הקניות'); }} />
-          <Button style={{ flex: 1 }} title="תכנון להיום" icon="calendar" variant="ghost" onPress={() => { setPlanned(dateKey(), r.meal, r.id); toast('נוסף לתכנון היום'); }} />
+          <Button style={{ flex: 1 }} title="תכנון להיום" icon="calendar" variant="ghost" onPress={() => {
+            // one serving, built from the recipe's ingredients through the central engine
+            const items = r.ingredients.map((i) => { const f = foodById(i.foodId)!; const g = Math.round((i.grams / r.servings) * 10) / 10; return { foodId: f.id, name: f.name, amount: g, unitLabel: 'ג׳', grams: g, nutrients: nutrientsFor(f, g) }; });
+            plan({ date: dateKey(), meal: r.meal, title: r.name, items, source: 'manual' });
+            toast('נוסף לתכנון היום', { label: 'ליומן', onPress: () => router.push('/(tabs)/diary') });
+          }} />
         </Row>
       </Section>
     </Screen>
