@@ -1,0 +1,1 @@
+__d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{value:!0}),Object.defineProperty(e,"default",{enumerable:!0,get:function(){return c}}),r(d[0]);var t=r(d[1]),n=r(d[2]),u=r(d[3]);function c(){const c=(0,t.useLocalSearchParams)();return(0,u.jsx)(n.AddSheet,{pMeal:c.meal,pDate:c.date})}},772,[12,811,1064,6]);
