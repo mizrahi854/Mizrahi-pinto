@@ -153,7 +153,7 @@ export default function FoodDetail() {
       </View>
       {unit.grams == null && (
         <Tap onPress={() => setRuler(!ruler)} label={ruler ? 'הסתרת סרגל' : 'בחירה בסרגל'}>
-          <Text style={[ls.muted, { textAlign: 'center', color: light.accent, paddingVertical: 10 }]}>{ruler ? 'הסתרת הסרגל' : 'בחירה בסרגל נגלל'}</Text>
+          <Text style={[ls.muted, { textAlign: 'center', color: light.accentText, paddingVertical: 10 }]}>{ruler ? 'הסתרת הסרגל' : 'בחירה בסרגל נגלל'}</Text>
         </Tap>
       )}
       {ruler && unit.grams == null && (
@@ -231,9 +231,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: light.border },
   cell: { flex: 1, textAlign: 'center', fontFamily: fonts.regular, fontSize: 15, color: light.text2, fontVariant: ['tabular-nums'] },
   cellStrong: { fontFamily: fonts.bold, color: light.text },
-  link: { fontFamily: fonts.medium, fontSize: 14, color: light.accent, paddingVertical: 8 },
+  link: { fontFamily: fonts.medium, fontSize: 14, color: light.accentText, paddingVertical: 8 },
   ghost: { minHeight: 46, borderRadius: radius.pill, borderWidth: 1.5, borderColor: 'rgba(242,107,29,0.4)', alignItems: 'center', justifyContent: 'center' },
-  ghostText: { fontFamily: fonts.semibold, fontSize: 14, color: light.accent },
+  ghostText: { fontFamily: fonts.semibold, fontSize: 14, color: light.accentText },
   secondary: { height: 58, borderRadius: radius.pill, borderWidth: 1.5, borderColor: '#DCD5D0', backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   secondaryText: { fontFamily: fonts.semibold, fontSize: 16, color: light.text },
   primary: { height: 58, borderRadius: radius.pill, backgroundColor: light.accent, alignItems: 'center', justifyContent: 'center' },

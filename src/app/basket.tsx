@@ -179,5 +179,5 @@ const styles = StyleSheet.create({
   box: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: '#CFC8C3', alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: light.accent, borderColor: light.accent },
   ghost: { minHeight: 50, borderRadius: radius.pill, borderWidth: 1.5, borderColor: 'rgba(242,107,29,0.4)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
-  ghostText: { fontFamily: fonts.semibold, fontSize: 14.5, color: light.accent },
+  ghostText: { fontFamily: fonts.semibold, fontSize: 14.5, color: light.accentText },
 });

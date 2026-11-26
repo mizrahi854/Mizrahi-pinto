@@ -79,7 +79,7 @@ export default function ChallengeDetail() {
             return (
               <View key={d} accessible accessibilityLabel={`${parseKey(d).getDate()}/${parseKey(d).getMonth() + 1}: ${rest ? 'מנוחה' : full ? 'הושלם' : n ? 'חלקי' : d > today ? 'עתידי' : 'ללא תיעוד'}`}
                 style={[styles.cell, full && { backgroundColor: colors.accent }, n > 0 && !full && { backgroundColor: 'rgba(232,120,42,0.35)' }, rest && { borderStyle: 'dashed' }, d === today && { borderColor: colors.accentLight, borderWidth: 2 }, d > today && { opacity: 0.35 }]}>
-                <Text style={{ fontSize: 10, color: full ? colors.textOnAccent : colors.text2, fontFamily: fonts.medium }}>{parseKey(d).getDate()}</Text>
+                <Text style={{ fontSize: 11, color: full ? colors.textOnAccent : colors.text2, fontFamily: fonts.medium }}>{parseKey(d).getDate()}</Text>
               </View>
             );
           })}

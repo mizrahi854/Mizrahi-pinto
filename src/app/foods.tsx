@@ -234,7 +234,7 @@ const portionText = (p: { label: string; grams: number }, unit: string) => (/\d/
 function LinkButton({ icon, title, onPress }: { icon: IconName; title: string; onPress: () => void }) {
   return (
     <Tap onPress={onPress} label={title}>
-      <View style={styles.link}><Icon name={icon} size={18} color={light.accent} /><Text style={[ls.bodyStrong, { color: light.accent, fontSize: 15 }]}>{title}</Text></View>
+      <View style={styles.link}><Icon name={icon} size={18} color={light.accent} /><Text style={[ls.bodyStrong, { color: light.accentText, fontSize: 15 }]}>{title}</Text></View>
     </Tap>
   );
 }

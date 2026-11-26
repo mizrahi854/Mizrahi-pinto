@@ -6,7 +6,8 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, useReducedMotion, withRepeat, Easing } from 'react-native-reanimated';
 import { Icon, IconName } from './Icon';
-import { colors, fonts } from '@/theme/tokens';
+import { colors, fonts, light } from '@/theme/tokens';
+import { useReduceTransparency } from '@/lib/a11y';
 import { haptic } from '@/lib/haptics';
 import { MAX_W } from './Brand';
 
@@ -23,11 +24,12 @@ export function NavBar({ state, navigation }: { state: { index: number; routes: 
   const insets = useSafeAreaInsets();
   const activeName = state.routes[state.index]?.name;
   const lightMode = activeName === 'nutrition';
+  const solid = useReduceTransparency();
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom - 6, 10) }]}>
       <View style={styles.shadow}>
-        <View style={[styles.bar, lightMode && styles.barLight]}>
-          <BlurView intensity={40} tint={lightMode ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
+        <View style={[styles.bar, lightMode && styles.barLight, solid && { backgroundColor: lightMode ? light.card : colors.surfaceRaised }]} accessibilityRole="tablist">
+          {!solid && <BlurView intensity={40} tint={lightMode ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />}
           <LinearGradient colors={lightMode ? ['rgba(255,255,255,0.7)', 'rgba(255,255,255,0.55)'] : ['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.0)', 'rgba(232,120,42,0.08)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
           <View style={styles.reflection} pointerEvents="none" />
           {ITEMS.map((it) =>
@@ -59,7 +61,7 @@ function Tab({ item, active, onPress, lightMode }: { item: (typeof ITEMS)[number
   const v = useSharedValue(active ? 1 : 0);
   const reduce = useReducedMotion();
   useEffect(() => {
-    v.value = reduce ? (active ? 1 : 0) : withSpring(active ? 1 : 0, { damping: 16, stiffness: 180 });
+    v.set(reduce ? (active ? 1 : 0) : withSpring(active ? 1 : 0, { damping: 16, stiffness: 180 }));
   }, [active, reduce, v]);
   const bg = useAnimatedStyle(() => ({ opacity: v.value, transform: [{ scale: 0.7 + 0.3 * v.value }] }));
   const ic = useAnimatedStyle(() => ({ transform: [{ translateY: -1.5 * v.value }, { scale: 1 + 0.06 * v.value }] }));
@@ -69,9 +71,9 @@ function Tab({ item, active, onPress, lightMode }: { item: (typeof ITEMS)[number
         <LinearGradient colors={['rgba(232,120,42,0.38)', 'rgba(168,60,0,0.22)']} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <Animated.View style={ic}>
-        <Icon name={item.icon} size={23} color={lightMode ? (active ? '#E2550A' : '#4A4440') : active ? colors.text : 'rgba(255,255,255,0.72)'} strokeWidth={active ? 2 : 1.6} />
+        <Icon name={item.icon} size={23} color={lightMode ? (active ? light.accentText : '#4A4440') : active ? colors.text : 'rgba(255,255,255,0.72)'} strokeWidth={active ? 2 : 1.6} />
       </Animated.View>
-      <Text style={[styles.label, lightMode && { color: '#6E6763' }, active && { color: lightMode ? '#E2550A' : colors.text, fontFamily: fonts.semibold }]} numberOfLines={1}>{item.label}</Text>
+      <Text style={[styles.label, lightMode && { color: '#6E6763' }, active && { color: lightMode ? light.accentText : colors.text, fontFamily: fonts.semibold }]} numberOfLines={1}>{item.label}</Text>
     </Pressable>
   );
 }
@@ -81,7 +83,7 @@ function PlusButton() {
   const glow = useSharedValue(0.6);
   const press = useSharedValue(1);
   useEffect(() => {
-    if (!reduce) glow.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
+    if (!reduce) glow.set(withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true));
   }, [reduce, glow]);
   const g = useAnimatedStyle(() => ({ opacity: 0.35 + 0.35 * glow.value, transform: [{ scale: 0.95 + 0.1 * glow.value }] }));
   const p = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
   reflection: { position: 'absolute', top: 0, left: 24, right: 24, height: 1, backgroundColor: 'rgba(255,255,255,0.22)' },
   tab: { flex: 1, height: 62, alignItems: 'center', justifyContent: 'center', gap: 3 },
   activeBg: { position: 'absolute', top: 2, bottom: 2, left: 2, right: 2, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,170,110,0.28)' },
-  label: { fontFamily: fonts.regular, fontSize: 10.5, color: 'rgba(255,255,255,0.62)' },
+  label: { fontFamily: fonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.7)' },
   plusSlot: { width: 74, height: 74, alignItems: 'center', justifyContent: 'center' },
   plusGlow: { position: 'absolute', width: 66, height: 66, borderRadius: 33, backgroundColor: colors.accent, ...(Platform.OS === 'web' ? ({ filter: 'blur(12px)' } as any) : {}) },
   plus: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,210,170,0.6)' },

@@ -69,7 +69,7 @@ export default function Nutrition() {
 
       <Row style={{ justifyContent: 'space-between', marginTop: space.xl, marginBottom: space.sm }}>
         <Text style={ls.h2}>הארוחות של היום</Text>
-        <Tap onPress={() => setTools(true)} label="כלי תזונה"><Text style={[ls.muted, { color: light.accent, padding: 6 }]}>כלים</Text></Tap>
+        <Tap onPress={() => setTools(true)} label="כלי תזונה"><View style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: 8 }}><Text style={[ls.muted, { color: light.accentText }]}>כלים</Text></View></Tap>
       </Row>
       <View style={{ gap: 10 }}>
         {meals.map((m) => {

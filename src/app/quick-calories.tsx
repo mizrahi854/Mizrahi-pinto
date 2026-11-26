@@ -112,7 +112,7 @@ export default function QuickCalories() {
         <>
           <Tap onPress={() => setShowMore(!showMore)} label={showMore ? 'הסתרת ערכים נוספים' : 'הוספת חלבון, פחמימות ושומן'}>
             <View style={styles.moreBtn}>
-              <Text style={[ls.bodyStrong, { color: light.accent }]}>{showMore ? 'הסתרת ערכים' : '+ חלבון, פחמימות, שומן (לא חובה)'}</Text>
+              <Text style={[ls.bodyStrong, { color: light.accentText }]}>{showMore ? 'הסתרת ערכים' : '+ חלבון, פחמימות, שומן (לא חובה)'}</Text>
             </View>
           </Tap>
           {showMore && (

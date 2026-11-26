@@ -39,7 +39,7 @@ export default function Workouts() {
               <View style={{ width: 46, paddingVertical: 10, borderRadius: 16, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: i === new Date().getDay() ? colors.accent : colors.border, backgroundColor: p ? 'rgba(232,120,42,0.12)' : colors.glass }}>
                 <Text style={[type.caption, { color: colors.text2 }]}>{d}</Text>
                 <Icon name={done[i] ? 'check' : p ? 'dumbbell' : 'moon'} size={18} color={p || done[i] ? colors.accent : colors.text3} />
-                <Text style={{ fontSize: 9, color: colors.text2, fontFamily: fonts.regular }} numberOfLines={1}>{p ? p.name.split(' ')[0] : 'מנוחה'}</Text>
+                <Text style={{ fontSize: 11, color: colors.text2, fontFamily: fonts.regular }} numberOfLines={1}>{p ? p.name.split(' ')[0] : 'מנוחה'}</Text>
               </View>
             </Tap>
           );

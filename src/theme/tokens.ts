@@ -23,7 +23,7 @@ export const colors = {
 
   text: '#FFFFFF',
   text2: '#B9ADA7',
-  text3: '#7D716B',
+  text3: '#8A7E78', // 5.1:1 on bg (HIG accessibility: 4.5:1 for small text)
   textOnAccent: '#1A0C04',
 
   danger: '#E5484D',
@@ -39,9 +39,10 @@ export const light = {
   border: 'rgba(20, 12, 6, 0.07)',
   text: '#141010',
   text2: '#6E6763',
-  text3: '#A39C98',
+  text3: '#736B66', // 4.8:1 on bg
   accent: '#F26B1D',
   accentDeep: '#E2550A',
+  accentText: '#C2410C', // orange for small text on white: 5.2:1 (accent itself is 3.05:1 – icons/large text only)
   accentSoft: 'rgba(242, 107, 29, 0.12)',
   track: '#ECE8E5',
   protein: '#3BB273', // semantic macro colours from the mockup (not brand colours)
