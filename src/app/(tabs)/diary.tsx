@@ -198,9 +198,9 @@ function Sum({ v, l, big }: { v: string; l: string; big?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  week: { flexDirection: 'row', alignItems: 'center', gap: 3, justifyContent: 'center' },
-  weekArrow: { width: 32, height: 52, alignItems: 'center', justifyContent: 'center' },
-  wd: { width: 42, paddingVertical: 6, alignItems: 'center', borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.18)', minHeight: 58 },
+  week: { flexDirection: 'row', alignItems: 'center', gap: 2, justifyContent: 'center' },
+  weekArrow: { width: 40, height: 56, alignItems: 'center', justifyContent: 'center' },
+  wd: { width: 38, paddingVertical: 6, alignItems: 'center', borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.18)', minHeight: 58 },
   wdOn: { backgroundColor: '#F2A05C', borderColor: '#F2A05C' },
   wdToday: { borderColor: '#F2A05C' },
   wdDay: { fontFamily: fonts.regular, fontSize: 11, color: 'rgba(255,255,255,0.75)' },

@@ -42,11 +42,11 @@ export function NavBar({ state, navigation }: { state: { index: number; routes: 
                 lightMode={lightMode}
                 active={activeName === it.route}
                 onPress={() => {
-                  const route = state.routes.find((r) => r.name === it.route);
-                  if (!route) return;
                   haptic.select();
-                  const ev = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                  if (activeName !== it.route && !ev.defaultPrevented) navigation.navigate(it.route);
+                  if (activeName === it.route) return;
+                  // the js-tabs tab bar does not always receive a navigation object – navigate through the router
+                  if (navigation?.navigate) navigation.navigate(it.route);
+                  else router.navigate(it.route === 'index' ? '/(tabs)' : (`/(tabs)/${it.route}` as any));
                 }}
               />
             ),

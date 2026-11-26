@@ -195,7 +195,7 @@ function DishMenu({ id, onClose, eventId, onChoose, onLog, onFav, onDelete }: { 
 }
 
 const styles = StyleSheet.create({
-  link: { fontFamily: fonts.semibold, fontSize: 15, color: light.accentText, padding: 8 },
+  link: { fontFamily: fonts.semibold, fontSize: 15, color: light.accentText, paddingHorizontal: 10, paddingVertical: 12 },
   ghost: { minHeight: 52, borderRadius: radius.md, borderWidth: 1.5, borderColor: 'rgba(194,65,12,0.3)', backgroundColor: light.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   ghostText: { fontFamily: fonts.semibold, fontSize: 14.5, color: light.text },
   res: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: light.card },

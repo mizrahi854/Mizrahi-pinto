@@ -56,7 +56,7 @@ export default function Shabbat() {
                   <Text style={ls.bodyStrong}>{def.label}</Text>
                   <Text style={ls.muted} numberOfLines={1}>{m.dishes.length ? m.dishes.map((d) => d.name.split(',')[0]).join(' · ') : 'עוד לא נבחרו מנות'}{calories && m.dishes.length ? ` · ${t.kcal} קק״ל` : ''}</Text>
                 </Pressable>
-                <Pressable onPress={() => setMeal(m.key, { enabled: !m.enabled })} accessibilityRole="switch" accessibilityState={{ checked: m.enabled }} accessibilityLabel={`${def.label} בתוכנית`} style={[styles.sw, m.enabled && styles.swOn]}><View style={styles.knob} /></Pressable>
+                <Pressable onPress={() => setMeal(m.key, { enabled: !m.enabled })} accessibilityRole="switch" accessibilityState={{ checked: m.enabled }} accessibilityLabel={`${def.label} בתוכנית`} style={styles.swHit}><View style={[styles.sw, m.enabled && styles.swOn]}><View style={styles.knob} /></View></Pressable>
               </View>
               {open && (
                 <View style={{ gap: 10 }}>
@@ -136,6 +136,7 @@ function WorkoutPick({ label, value, onChange, day }: { label: string; value: Wo
 
 const styles = StyleSheet.create({
   mealHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  swHit: { minWidth: 56, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   sw: { width: 50, height: 30, borderRadius: 15, backgroundColor: '#D9D3CF', padding: 3, flexDirection: 'row' },
   swOn: { backgroundColor: light.accentText, justifyContent: 'flex-end' },
   knob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff' },

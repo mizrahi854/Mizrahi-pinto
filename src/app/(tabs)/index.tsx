@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   heroCenter: { alignItems: 'center', marginTop: 30, gap: 10 },
   greeting: { ...type.label, color: 'rgba(255,255,255,0.72)', fontFamily: fonts.medium, marginBottom: 4 },
   heroLabel: { fontFamily: fonts.medium, fontSize: 22, color: colors.text, marginTop: 6 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.22)' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, minHeight: 44, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,190,140,0.22)' },
   pillText: { ...type.label, color: colors.text, fontFamily: fonts.medium },
   panel: { backgroundColor: colors.surface, paddingHorizontal: space.md, marginTop: -2, gap: 0 },
   tile: { minHeight: 104, padding: 14, borderRadius: radius.lg, backgroundColor: 'rgba(22,13,8,0.85)', borderWidth: 1, borderColor: colors.border, overflow: 'hidden', justifyContent: 'center' },

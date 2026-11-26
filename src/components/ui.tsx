@@ -371,7 +371,7 @@ export const styles = StyleSheet.create({
   btnDanger: { backgroundColor: 'rgba(229,72,77,0.1)', borderWidth: 1, borderColor: 'rgba(229,72,77,0.35)' },
   btnText: { fontFamily: fonts.semibold, fontSize: 16 },
   iconBtn: { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 38, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: colors.border },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.accent, borderColor: colors.accentLight },
   chipText: { ...type.label, color: colors.text, fontFamily: fonts.medium },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.sm },
